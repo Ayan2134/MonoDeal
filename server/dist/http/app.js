@@ -3,8 +3,30 @@ import express from 'express';
 import { env } from '../config/env.js';
 export function createApp() {
     const app = express();
-    const preferredClientOrigin = env.clientOrigins[0] ?? 'http://localhost:5173';
-    app.use(cors({ origin: env.clientOrigins }));
+    const preferredClientOrigin = env.publicAppUrl;
+    app.set('trust proxy', true);
+    app.use((request, response, next) => {
+        const startTime = Date.now();
+        response.on('finish', () => {
+            const durationMs = Date.now() - startTime;
+            console.info('[http]', {
+                method: request.method,
+                path: request.originalUrl,
+                status: response.statusCode,
+                durationMs,
+            });
+        });
+        next();
+    });
+    app.use(cors({
+        origin: (origin, callback) => {
+            if (env.allowAnyOrigin || !origin || env.clientUrls.includes(origin)) {
+                callback(null, true);
+                return;
+            }
+            callback(new Error(`Origin ${origin} is not allowed by CORS.`));
+        },
+    }));
     app.use(express.json());
     app.get('/', (_request, response) => {
         response.type('html').send(`
@@ -77,6 +99,9 @@ export function createApp() {
     app.get('/api/health', (_request, response) => {
         response.json({ ok: true, service: 'monodeal-server' });
     });
+    app.get('/health', (_request, response) => {
+        response.json({ status: 'ok' });
+    });
     app.get('/api/status', (_request, response) => {
         response.json({
             ok: true,
@@ -84,6 +109,10 @@ export function createApp() {
             frontend: preferredClientOrigin,
             socketIo: true,
         });
+    });
+    app.use((error, _request, response, _next) => {
+        console.error('[http] unhandled error', { message: error.message });
+        response.status(500).json({ ok: false, error: 'Unexpected server error.' });
     });
     return app;
 }

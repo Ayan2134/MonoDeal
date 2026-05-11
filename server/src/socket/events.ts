@@ -76,6 +76,7 @@ export function registerSocketHandlers(io: MonodealServer, socket: MonodealSocke
 
       if (result.ok) {
         socket.join(result.room.roomId);
+        logSocketEvent('room joined', { socketId: socket.id, roomId: result.room.roomId, roomCode: result.room.roomCode });
         callback(result);
         broadcastRoom(io, result.room);
         return;
@@ -98,6 +99,7 @@ export function registerSocketHandlers(io: MonodealServer, socket: MonodealSocke
 
       if (result.ok) {
         socket.join(result.room.roomId);
+        logSocketEvent('room joined', { socketId: socket.id, roomId: result.room.roomId, roomCode: result.room.roomCode });
         callback(result);
         broadcastRoom(io, result.room);
         return;
@@ -120,6 +122,7 @@ export function registerSocketHandlers(io: MonodealServer, socket: MonodealSocke
 
       if (result.ok) {
         socket.join(result.room.roomId);
+        logSocketEvent('room joined', { socketId: socket.id, roomId: result.room.roomId, roomCode: result.room.roomCode });
         callback(result);
         broadcastRoom(io, result.room);
         return;
@@ -188,5 +191,9 @@ export function registerSocketHandlers(io: MonodealServer, socket: MonodealSocke
     } catch (error) {
       handleUnexpectedError(socket, undefined, error);
     }
+  });
+
+  socket.on('error', (error) => {
+    logSocketError('socket error', error, { socketId: socket.id });
   });
 }

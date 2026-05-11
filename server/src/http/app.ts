@@ -25,7 +25,7 @@ export function createApp() {
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (env.allowAnyOrigin || !origin || env.clientOrigins.includes(origin)) {
+        if (env.allowAnyOrigin || !origin || env.clientUrls.includes(origin)) {
           callback(null, true);
           return;
         }
@@ -106,6 +106,10 @@ export function createApp() {
 
   app.get('/api/health', (_request, response) => {
     response.json({ ok: true, service: 'monodeal-server' });
+  });
+
+  app.get('/health', (_request, response) => {
+    response.json({ status: 'ok' });
   });
 
   app.get('/api/status', (_request, response) => {

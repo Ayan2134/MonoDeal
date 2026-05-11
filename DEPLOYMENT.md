@@ -7,13 +7,15 @@ This guide covers production deployment for Monodeal.
 - Client: Vite + React app deployed to Vercel (or any static host).
 - Server: Express + Socket.IO deployed to Render (or any Node host) with WebSocket support.
 
+Compatibility files are already included: [vercel.json](vercel.json) and [render.yaml](render.yaml).
+
 ## Environment Variables
 
 Client (Vercel Project Settings or .env.production):
 
 ```
 VITE_SOCKET_URL=https://api.your-domain.com
-VITE_PUBLIC_APP_URL=https://app.your-domain.com
+VITE_APP_URL=https://app.your-domain.com
 ```
 
 Server (Render Environment):
@@ -28,6 +30,16 @@ PUBLIC_APP_URL=https://app.your-domain.com
 Notes:
 - `CLIENT_ORIGIN` can be a comma-separated list. Use `*` only for temporary debugging.
 - `PUBLIC_APP_URL` is used by the server landing page for the frontend link.
+- `VITE_APP_URL` is used to build invite links on the client.
+- `VITE_SOCKET_URL` should be the Render service URL (https) so Socket.IO upgrades to WSS in production.
+
+## Deployment Scripts
+
+```bash
+npm run build:client   # Builds the Vite frontend
+npm run build:server   # Builds the Node server
+npm run start:server   # Runs the compiled server
+```
 
 ## Vercel (Frontend)
 
@@ -44,6 +56,8 @@ Notes:
 3. Start command: `npm run start --workspace server`.
 4. Set the server environment variables above.
 5. Deploy.
+
+Render Web Services support WebSockets by default, so Socket.IO will connect over WSS when the client uses an https URL.
 
 ## Production Validation
 

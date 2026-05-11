@@ -69,7 +69,7 @@ export function LobbyPage() {
   }
 
   const isHost = room?.hostId === playerId;
-  const inviteOrigin = env.publicAppUrl || window.location.origin;
+  const inviteOrigin = env.appUrl;
   const inviteUrl = room ? `${inviteOrigin}${room.invitePath}` : '';
 
   return (

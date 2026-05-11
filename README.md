@@ -43,10 +43,10 @@ Client variables must use the `VITE_` prefix.
 ```bash
 # client/.env
 VITE_SOCKET_URL=http://localhost:4000
-VITE_PUBLIC_APP_URL=http://192.168.1.4:5173
+VITE_APP_URL=http://192.168.1.4:5173
 ```
 
-Set `VITE_PUBLIC_APP_URL` to the laptop's LAN URL when you want copied invite links to work on other devices on the same Wi-Fi.
+Set `VITE_APP_URL` to the laptop's LAN URL when you want copied invite links to work on other devices on the same Wi-Fi.
 
 ```bash
 # server/.env
