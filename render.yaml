@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: monodeal-server
+    env: node
+    rootDir: .
+    buildCommand: npm install && npm run build --workspace server
+    startCommand: npm run start --workspace server
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: CLIENT_ORIGIN
+        value: https://app.your-domain.com
+      - key: PUBLIC_APP_URL
+        value: https://app.your-domain.com
