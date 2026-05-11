@@ -1,5 +1,5 @@
 import cors from 'cors';
-import express from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
 import { env } from '../config/env.js';
 
 export function createApp() {
@@ -8,7 +8,7 @@ export function createApp() {
 
   app.set('trust proxy', true);
 
-  app.use((request, response, next) => {
+  app.use((request: Request, response: Response, next: NextFunction) => {
     const startTime = Date.now();
     response.on('finish', () => {
       const durationMs = Date.now() - startTime;
@@ -35,7 +35,7 @@ export function createApp() {
   );
   app.use(express.json());
 
-  app.get('/', (_request, response) => {
+  app.get('/', (_request: Request, response: Response) => {
     response.type('html').send(`
       <!doctype html>
       <html lang="en">
@@ -104,15 +104,15 @@ export function createApp() {
     `);
   });
 
-  app.get('/api/health', (_request, response) => {
+  app.get('/api/health', (_request: Request, response: Response) => {
     response.json({ ok: true, service: 'monodeal-server' });
   });
 
-  app.get('/health', (_request, response) => {
+  app.get('/health', (_request: Request, response: Response) => {
     response.json({ status: 'ok' });
   });
 
-  app.get('/api/status', (_request, response) => {
+  app.get('/api/status', (_request: Request, response: Response) => {
     response.json({
       ok: true,
       service: 'monodeal-server',
@@ -121,7 +121,7 @@ export function createApp() {
     });
   });
 
-  app.use((error: Error, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
+  app.use((error: Error, _request: Request, response: Response, _next: NextFunction) => {
     console.error('[http] unhandled error', { message: error.message });
     response.status(500).json({ ok: false, error: 'Unexpected server error.' });
   });
