@@ -1,4 +1,11 @@
-import type { CreateRoomPayload, JoinRoomPayload, ReconnectPlayerPayload, StartGamePayload } from './types.js';
+import type {
+  CreateRoomPayload,
+  EndTurnPayload,
+  JoinRoomPayload,
+  ReconnectPlayerPayload,
+  StartGamePayload,
+  StartTurnPayload,
+} from './types.js';
 
 const ROOM_CODE_PATTERN = /^[A-Z2-9]{6}$/;
 const PLAYER_ID_PATTERN = /^[a-zA-Z0-9:_-]{8,80}$/;
@@ -58,6 +65,18 @@ export function validateReconnectPayload(payload: ReconnectPlayerPayload) {
 }
 
 export function validateStartGamePayload(payload: StartGamePayload) {
+  if (!validatePlayerId(payload.playerId)) {
+    return 'Invalid player session. Refresh and try again.';
+  }
+
+  if (!payload.roomId.trim()) {
+    return 'Missing room id.';
+  }
+
+  return null;
+}
+
+export function validateTurnPayload(payload: StartTurnPayload | EndTurnPayload) {
   if (!validatePlayerId(payload.playerId)) {
     return 'Invalid player session. Refresh and try again.';
   }

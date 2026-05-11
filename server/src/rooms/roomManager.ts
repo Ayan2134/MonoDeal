@@ -6,9 +6,13 @@ import {
   validateJoinRoomPayload,
   validateReconnectPayload,
   validateStartGamePayload,
+  validateTurnPayload,
 } from './validation.js';
+import { initializeGameState } from '../game/initialize.js';
+import { endTurn, startTurn, type GameStateResult } from '../game/turn.js';
 import type {
   CreateRoomPayload,
+  EndTurnPayload,
   JoinRoomPayload,
   LeaveRoomPayload,
   Player,
@@ -16,6 +20,7 @@ import type {
   ReconnectPlayerPayload,
   Room,
   RoomResult,
+  StartTurnPayload,
   StartGamePayload,
 } from './types.js';
 import { DISCONNECT_GRACE_MS } from './constants.js';
@@ -172,9 +177,72 @@ export class RoomManager {
     }
 
     room.status = 'started';
+    room.gameState = initializeGameState(room);
     room.updatedAt = Date.now();
 
     return { ok: true, room: this.toPublicRoom(room) };
+  }
+
+  startTurn(payload: StartTurnPayload): GameStateResult {
+    const validationError = validateTurnPayload(payload);
+
+    if (validationError) {
+      return { ok: false, error: validationError };
+    }
+
+    const room = this.roomsById.get(payload.roomId);
+
+    if (!room || !room.gameState) {
+      return { ok: false, error: 'Game state not found.' };
+    }
+
+    const player = room.players.find((currentPlayer) => currentPlayer.playerId === payload.playerId);
+
+    if (!player || player.status !== 'connected') {
+      return { ok: false, error: 'Player is not connected.' };
+    }
+
+    const result = startTurn(room.gameState, payload.playerId);
+
+    if (result.ok) {
+      room.gameState = result.gameState;
+      room.updatedAt = Date.now();
+    }
+
+    return result;
+  }
+
+  endTurn(payload: EndTurnPayload): GameStateResult {
+    const validationError = validateTurnPayload(payload);
+
+    if (validationError) {
+      return { ok: false, error: validationError };
+    }
+
+    const room = this.roomsById.get(payload.roomId);
+
+    if (!room || !room.gameState) {
+      return { ok: false, error: 'Game state not found.' };
+    }
+
+    const player = room.players.find((currentPlayer) => currentPlayer.playerId === payload.playerId);
+
+    if (!player || player.status !== 'connected') {
+      return { ok: false, error: 'Player is not connected.' };
+    }
+
+    const result = endTurn(room.gameState, payload.playerId);
+
+    if (result.ok) {
+      room.gameState = result.gameState;
+      room.updatedAt = Date.now();
+    }
+
+    return result;
+  }
+
+  getGameState(roomId: string) {
+    return this.roomsById.get(roomId)?.gameState ?? null;
   }
 
   markDisconnected(socketId: string, onExpire: (room: PublicRoom | null) => void): PublicRoom[] {

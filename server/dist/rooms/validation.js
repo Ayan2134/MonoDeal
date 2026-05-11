@@ -50,3 +50,12 @@ export function validateStartGamePayload(payload) {
     }
     return null;
 }
+export function validateTurnPayload(payload) {
+    if (!validatePlayerId(payload.playerId)) {
+        return 'Invalid player session. Refresh and try again.';
+    }
+    if (!payload.roomId.trim()) {
+        return 'Missing room id.';
+    }
+    return null;
+}

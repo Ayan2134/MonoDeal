@@ -1,0 +1,111 @@
+import { CardType, PropertyColor } from './types.js';
+
+export type CardSeed = {
+  type: CardType;
+  name: string;
+  color?: PropertyColor;
+  colors?: PropertyColor[];
+  value?: number;
+  actionId?: string;
+};
+
+export const starterCards: CardSeed[] = [
+  // Property cards
+  { type: CardType.Property, name: 'Brown 1', color: PropertyColor.Brown },
+  { type: CardType.Property, name: 'Brown 2', color: PropertyColor.Brown },
+  { type: CardType.Property, name: 'Light Blue 1', color: PropertyColor.LightBlue },
+  { type: CardType.Property, name: 'Light Blue 2', color: PropertyColor.LightBlue },
+  { type: CardType.Property, name: 'Light Blue 3', color: PropertyColor.LightBlue },
+  { type: CardType.Property, name: 'Pink 1', color: PropertyColor.Pink },
+  { type: CardType.Property, name: 'Pink 2', color: PropertyColor.Pink },
+  { type: CardType.Property, name: 'Pink 3', color: PropertyColor.Pink },
+  { type: CardType.Property, name: 'Orange 1', color: PropertyColor.Orange },
+  { type: CardType.Property, name: 'Orange 2', color: PropertyColor.Orange },
+  { type: CardType.Property, name: 'Orange 3', color: PropertyColor.Orange },
+  { type: CardType.Property, name: 'Red 1', color: PropertyColor.Red },
+  { type: CardType.Property, name: 'Red 2', color: PropertyColor.Red },
+  { type: CardType.Property, name: 'Red 3', color: PropertyColor.Red },
+  { type: CardType.Property, name: 'Yellow 1', color: PropertyColor.Yellow },
+  { type: CardType.Property, name: 'Yellow 2', color: PropertyColor.Yellow },
+  { type: CardType.Property, name: 'Yellow 3', color: PropertyColor.Yellow },
+  { type: CardType.Property, name: 'Green 1', color: PropertyColor.Green },
+  { type: CardType.Property, name: 'Green 2', color: PropertyColor.Green },
+  { type: CardType.Property, name: 'Green 3', color: PropertyColor.Green },
+  { type: CardType.Property, name: 'Dark Blue 1', color: PropertyColor.DarkBlue },
+  { type: CardType.Property, name: 'Dark Blue 2', color: PropertyColor.DarkBlue },
+  { type: CardType.Property, name: 'Rail 1', color: PropertyColor.Rail },
+  { type: CardType.Property, name: 'Rail 2', color: PropertyColor.Rail },
+  { type: CardType.Property, name: 'Rail 3', color: PropertyColor.Rail },
+  { type: CardType.Property, name: 'Rail 4', color: PropertyColor.Rail },
+  { type: CardType.Property, name: 'Utility 1', color: PropertyColor.Utility },
+  { type: CardType.Property, name: 'Utility 2', color: PropertyColor.Utility },
+
+  // Money cards
+  { type: CardType.Money, name: 'Money 1', value: 1 },
+  { type: CardType.Money, name: 'Money 1', value: 1 },
+  { type: CardType.Money, name: 'Money 2', value: 2 },
+  { type: CardType.Money, name: 'Money 2', value: 2 },
+  { type: CardType.Money, name: 'Money 3', value: 3 },
+  { type: CardType.Money, name: 'Money 3', value: 3 },
+  { type: CardType.Money, name: 'Money 4', value: 4 },
+  { type: CardType.Money, name: 'Money 4', value: 4 },
+  { type: CardType.Money, name: 'Money 5', value: 5 },
+  { type: CardType.Money, name: 'Money 5', value: 5 },
+  { type: CardType.Money, name: 'Money 10', value: 10 },
+
+  // Action cards
+  { type: CardType.Action, name: 'Pass Go', actionId: 'pass-go', value: 1 },
+  { type: CardType.Action, name: 'Pass Go', actionId: 'pass-go', value: 1 },
+  { type: CardType.Action, name: 'Pass Go', actionId: 'pass-go', value: 1 },
+  { type: CardType.Action, name: 'Rent', actionId: 'rent' },
+  { type: CardType.Action, name: 'Rent', actionId: 'rent' },
+  { type: CardType.Action, name: 'Rent', actionId: 'rent' },
+  { type: CardType.Action, name: 'Birthday', actionId: 'birthday' },
+  { type: CardType.Action, name: 'Birthday', actionId: 'birthday' },
+  { type: CardType.Action, name: 'Debt Collector', actionId: 'debt-collector' },
+  { type: CardType.Action, name: 'Debt Collector', actionId: 'debt-collector' },
+  { type: CardType.Action, name: 'Deal Breaker', actionId: 'deal-breaker' },
+
+  // Wildcards
+  {
+    type: CardType.Wildcard,
+    name: 'Wild Brown/Light Blue',
+    colors: [PropertyColor.Brown, PropertyColor.LightBlue],
+  },
+  {
+    type: CardType.Wildcard,
+    name: 'Wild Pink/Orange',
+    colors: [PropertyColor.Pink, PropertyColor.Orange],
+  },
+  {
+    type: CardType.Wildcard,
+    name: 'Wild Red/Yellow',
+    colors: [PropertyColor.Red, PropertyColor.Yellow],
+  },
+  {
+    type: CardType.Wildcard,
+    name: 'Wild Green/Dark Blue',
+    colors: [PropertyColor.Green, PropertyColor.DarkBlue],
+  },
+  {
+    type: CardType.Wildcard,
+    name: 'Wild Rail/Utility',
+    colors: [PropertyColor.Rail, PropertyColor.Utility],
+  },
+  {
+    type: CardType.Wildcard,
+    name: 'Wild Any',
+    colors: [
+      PropertyColor.Brown,
+      PropertyColor.LightBlue,
+      PropertyColor.Pink,
+      PropertyColor.Orange,
+      PropertyColor.Red,
+      PropertyColor.Yellow,
+      PropertyColor.Green,
+      PropertyColor.DarkBlue,
+      PropertyColor.Rail,
+      PropertyColor.Utility,
+    ],
+  },
+];

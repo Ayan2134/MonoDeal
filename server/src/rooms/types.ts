@@ -1,3 +1,5 @@
+import type { GameState } from '../game/state.js';
+
 export type PlayerConnectionStatus = 'connected' | 'disconnected';
 
 export type RoomStatus = 'waiting' | 'started';
@@ -18,6 +20,7 @@ export type Room = {
   hostId: string;
   status: RoomStatus;
   players: Player[];
+  gameState?: GameState;
   createdAt: number;
   updatedAt: number;
 };
@@ -73,6 +76,16 @@ export type LeaveRoomPayload = {
 };
 
 export type StartGamePayload = {
+  playerId: string;
+  roomId: string;
+};
+
+export type StartTurnPayload = {
+  playerId: string;
+  roomId: string;
+};
+
+export type EndTurnPayload = {
   playerId: string;
   roomId: string;
 };

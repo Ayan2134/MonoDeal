@@ -24,11 +24,24 @@ function emitRoomResult(socket, result) {
         socket.emit('room-error', result.error);
     }
 }
+function broadcastGameState(io, gameState) {
+    logSocketEvent('emit game-updated', { roomId: gameState.roomId, turnPlayer: gameState.currentTurnPlayerId });
+    io.to(gameState.roomId).emit('game-updated', gameState);
+}
+function broadcastTurn(io, turn) {
+    logSocketEvent('emit turn-updated', { roomId: turn.roomId, turnPlayer: turn.currentTurnPlayerId });
+    io.to(turn.roomId).emit('turn-updated', turn);
+}
 function handleUnexpectedError(socket, callback, error) {
     logSocketError('handler error', error, { socketId: socket.id });
     const result = { ok: false, error: 'Unexpected server error. Please try again.' };
     callback?.(result);
     emitRoomResult(socket, result);
+}
+function handleUnexpectedGameError(socket, callback, error) {
+    logSocketError('handler error', error, { socketId: socket.id });
+    const result = { ok: false, error: 'Unexpected server error. Please try again.' };
+    callback?.(result);
 }
 export function registerSocketHandlers(io, socket) {
     // Debugging flow: log inbound events, validate, emit acknowledgements, then
@@ -124,6 +137,16 @@ export function registerSocketHandlers(io, socket) {
             if (result.ok) {
                 callback(result);
                 broadcastRoom(io, result.room);
+                const gameState = roomManager.getGameState(result.room.roomId);
+                if (gameState) {
+                    broadcastGameState(io, gameState);
+                    broadcastTurn(io, {
+                        roomId: gameState.roomId,
+                        currentTurnPlayerId: gameState.currentTurnPlayerId,
+                        actionsRemaining: gameState.actionsRemaining,
+                        turnPhase: gameState.turnPhase,
+                    });
+                }
                 return;
             }
             logSocketEvent('start-game failed', { socketId: socket.id, error: result.error });
@@ -132,6 +155,40 @@ export function registerSocketHandlers(io, socket) {
         }
         catch (error) {
             handleUnexpectedError(socket, callback, error);
+        }
+    });
+    socket.on('start-turn', (payload, callback) => {
+        try {
+            logSocketEvent('start-turn', { socketId: socket.id, playerId: payload.playerId, roomId: payload.roomId });
+            const result = roomManager.startTurn(payload);
+            if (result.ok) {
+                callback(result);
+                broadcastGameState(io, result.gameState);
+                broadcastTurn(io, result.turn);
+                return;
+            }
+            logSocketEvent('start-turn failed', { socketId: socket.id, error: result.error });
+            callback(result);
+        }
+        catch (error) {
+            handleUnexpectedGameError(socket, callback, error);
+        }
+    });
+    socket.on('end-turn', (payload, callback) => {
+        try {
+            logSocketEvent('end-turn', { socketId: socket.id, playerId: payload.playerId, roomId: payload.roomId });
+            const result = roomManager.endTurn(payload);
+            if (result.ok) {
+                callback(result);
+                broadcastGameState(io, result.gameState);
+                broadcastTurn(io, result.turn);
+                return;
+            }
+            logSocketEvent('end-turn failed', { socketId: socket.id, error: result.error });
+            callback(result);
+        }
+        catch (error) {
+            handleUnexpectedGameError(socket, callback, error);
         }
     });
     socket.on('disconnect', (reason) => {

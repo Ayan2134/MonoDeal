@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { normalizePlayerName, normalizeRoomCode, validateCreateRoomPayload, validateJoinRoomPayload, validateReconnectPayload, validateStartGamePayload, } from './validation.js';
+import { normalizePlayerName, normalizeRoomCode, validateCreateRoomPayload, validateJoinRoomPayload, validateReconnectPayload, validateStartGamePayload, validateTurnPayload, } from './validation.js';
+import { initializeGameState } from '../game/initialize.js';
+import { endTurn, startTurn } from '../game/turn.js';
 import { DISCONNECT_GRACE_MS } from './constants.js';
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export class RoomManager {
@@ -115,8 +117,52 @@ export class RoomManager {
             return { ok: false, error: 'At least two players are required to start.' };
         }
         room.status = 'started';
+        room.gameState = initializeGameState(room);
         room.updatedAt = Date.now();
         return { ok: true, room: this.toPublicRoom(room) };
+    }
+    startTurn(payload) {
+        const validationError = validateTurnPayload(payload);
+        if (validationError) {
+            return { ok: false, error: validationError };
+        }
+        const room = this.roomsById.get(payload.roomId);
+        if (!room || !room.gameState) {
+            return { ok: false, error: 'Game state not found.' };
+        }
+        const player = room.players.find((currentPlayer) => currentPlayer.playerId === payload.playerId);
+        if (!player || player.status !== 'connected') {
+            return { ok: false, error: 'Player is not connected.' };
+        }
+        const result = startTurn(room.gameState, payload.playerId);
+        if (result.ok) {
+            room.gameState = result.gameState;
+            room.updatedAt = Date.now();
+        }
+        return result;
+    }
+    endTurn(payload) {
+        const validationError = validateTurnPayload(payload);
+        if (validationError) {
+            return { ok: false, error: validationError };
+        }
+        const room = this.roomsById.get(payload.roomId);
+        if (!room || !room.gameState) {
+            return { ok: false, error: 'Game state not found.' };
+        }
+        const player = room.players.find((currentPlayer) => currentPlayer.playerId === payload.playerId);
+        if (!player || player.status !== 'connected') {
+            return { ok: false, error: 'Player is not connected.' };
+        }
+        const result = endTurn(room.gameState, payload.playerId);
+        if (result.ok) {
+            room.gameState = result.gameState;
+            room.updatedAt = Date.now();
+        }
+        return result;
+    }
+    getGameState(roomId) {
+        return this.roomsById.get(roomId)?.gameState ?? null;
     }
     markDisconnected(socketId, onExpire) {
         const updatedRooms = [];
