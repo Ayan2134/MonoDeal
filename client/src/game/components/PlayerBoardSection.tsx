@@ -135,6 +135,11 @@ export function PlayerBoardSection({
           <div className="flex flex-wrap gap-6">
             {player.properties.map((set) => {
               const currentRent = getRent(set);
+              const hasRealProperty = set.cards.some(c => c.type === 'property');
+              const setSize = getSetSize(set.color);
+              const isFullSize = set.cards.length >= setSize;
+              const isInvalidWildOnly = isFullSize && !hasRealProperty;
+
               return (
                 <div key={set.setId} className={`relative flex flex-col rounded-2xl border p-4 shadow-2xl min-w-[200px] transition-all hover:scale-[1.02] ${
                   set.isComplete ? 'border-brass/40 bg-brass/10 shadow-brass/5' : 'border-white/10 bg-white/5 shadow-black/40'
@@ -162,7 +167,7 @@ export function PlayerBoardSection({
                             <span className="text-[10px] font-black text-ink">H</span>
                           </div>
                         )}
-                        {!set.isComplete && set.cards.length >= getSetSize(set.color) && (
+                        {isInvalidWildOnly && (
                           <span className="text-[8px] font-black text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded border border-red-400/20" title="A complete set must have at least one real property card.">
                              WILD ONLY
                           </span>

@@ -36,7 +36,8 @@ export function CardView({
 }) {
   const isProperty = card.type === 'property';
   const isWildcard = card.type === 'wildcard';
-  const colorKey = isProperty ? (card as any).color : isWildcard ? 'wild' : null;
+  const assignedColor = (card as any).assignedColor;
+  const colorKey = isProperty ? (card as any).color : isWildcard ? (assignedColor || 'wild') : null;
   const headerColor = colorKey ? colorMap[colorKey] : '';
 
   if (compact) {
@@ -79,7 +80,9 @@ export function CardView({
              <span className="text-[9px] font-medium capitalize text-white/60">{(card as any).color.replace('-', ' ')}</span>
           )}
           {isWildcard && (
-             <span className="text-[9px] font-medium text-white/60">{(card as any).colors?.join(' / ')}</span>
+             <span className="text-[9px] font-medium text-white/60">
+               {assignedColor ? `Acting as ${assignedColor}` : (card as any).colors?.join(' / ')}
+             </span>
           )}
         </div>
       </div>

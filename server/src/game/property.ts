@@ -34,16 +34,32 @@ function isProperty(card: Card): card is PropertyCard {
  */
 export function normalizePropertySetWithBuildings(set: PropertySet, discardPile: Card[]): PropertySet {
   const required = getSetSize(set.color);
-  const hasRealProperty = set.cards.some(c => c.type === CardType.Property);
+  const realProperties = set.cards.filter(c => c.type === CardType.Property);
+  const wildcardProperties = set.cards.filter(c => c.type === CardType.Wildcard);
   
+  const hasRealProperty = realProperties.length > 0;
+  
+  // A set is complete if:
+  // - it has enough cards (real + wild)
+  // - AND it has at least one real property card
   const isComplete = Number.isFinite(required) 
     ? (set.cards.length >= required && hasRealProperty) 
     : false;
 
-  const normalized = {
+  const normalized: PropertySet = {
     ...set,
     isComplete
   };
+
+  // DEBUG LOG
+  console.log(`[PropertySync] Set ${set.setId} (${set.color}):`, {
+    totalCards: set.cards.length,
+    required,
+    realCount: realProperties.length,
+    wildCount: wildcardProperties.length,
+    isComplete,
+    hasRealProperty
+  });
   
   // If set is not complete, buildings must be discarded
   if (!normalized.isComplete) {
@@ -92,6 +108,7 @@ export function createNewSet(color: PropertyColor | 'wild'): PropertySet {
 export function canPlaceOnColor(card: Card, color: string) {
   if (color === 'wild') return isWildcard(card);
   if (isProperty(card)) return card.color === color;
+  // Wildcard must support the color
   return isWildcard(card) && card.colors.includes(color as PropertyColor);
 }
 
@@ -119,6 +136,11 @@ export function addPropertyCard(
   if (!canPlaceOnColor(card, targetColor)) {
     return { ok: false, error: 'Card cannot be placed in that property set.' };
   }
+  
+  // Set assigned color for wildcards
+  if (isWildcard(card) && targetColor !== 'wild') {
+    (card as WildcardCard).assignedColor = targetColor as PropertyColor;
+  }
 
   let nextProperties = [...player.properties];
   let targetSetIndex = targetSetId ? nextProperties.findIndex(s => s.setId === targetSetId) : -1;
@@ -139,13 +161,9 @@ export function addPropertyCard(
     targetSetIndex = nextProperties.length - 1;
   }
 
-  const targetSet = nextProperties[targetSetIndex]!;
+  const targetSet = { ...nextProperties[targetSetIndex]! };
   
   // Rule: A set cannot exceed its required size (overflow goes to new set)
-  // Wait, if targetSetId is specified, we might want to respect it but if it's full...
-  // Actually, players can have "extra" cards in a set but they don't count for rent?
-  // User says: "Extra properties beyond required set size: do NOT increase rent; must exist in separate row/set"
-  // So we MUST enforce set size limits.
   const maxSize = getSetSize(targetSet.color);
   if (targetSet.cards.length >= maxSize && Number.isFinite(maxSize)) {
      // If we were targeting a specific set and it's full, create a new one instead of failing
@@ -153,7 +171,8 @@ export function addPropertyCard(
      newSet.cards.push(card);
      nextProperties.push(newSet);
   } else {
-     targetSet.cards.push(card);
+     targetSet.cards = [...targetSet.cards, card];
+     nextProperties[targetSetIndex] = targetSet;
   }
 
   return { 
@@ -167,10 +186,11 @@ export function addBuildingToSet(
   buildingCard: Card,
   setId: string
 ): { ok: true; player: GamePlayer } | { ok: false; error: string } {
-  const setIndex = player.properties.findIndex(s => s.setId === setId);
+  const nextProperties = [...player.properties];
+  const setIndex = nextProperties.findIndex(s => s.setId === setId);
   if (setIndex === -1) return { ok: false, error: 'Target set not found.' };
 
-  const set = player.properties[setIndex]!;
+  const set = { ...nextProperties[setIndex]! };
   if (!set.isComplete) return { ok: false, error: 'Buildings can only be added to complete sets.' };
 
   const actionCard = buildingCard as any;
@@ -185,7 +205,8 @@ export function addBuildingToSet(
     return { ok: false, error: 'Invalid building card.' };
   }
 
-  return { ok: true, player: { ...player } };
+  nextProperties[setIndex] = set;
+  return { ok: true, player: { ...player, properties: nextProperties } };
 }
 
 /**
@@ -218,7 +239,12 @@ export function moveCardBetweenSets(
     return { ok: false, error: `This card cannot be placed in a ${targetColor} set.` };
   }
 
-  // 3. Add to target set
+  // 3. Set assigned color for wildcards
+  if (isWildcard(cardToMove)) {
+    (cardToMove as WildcardCard).assignedColor = targetColor !== 'wild' ? (targetColor as PropertyColor) : undefined;
+  }
+
+  // 4. Add to target set
   let finalProperties = nextProperties;
   if (targetSetId === 'new') {
     const newSet = createNewSet(targetColor);
@@ -228,19 +254,19 @@ export function moveCardBetweenSets(
     const setIdx = finalProperties.findIndex(s => s.setId === targetSetId);
     if (setIdx === -1) return { ok: false, error: 'Target set not found.' };
     
-    const targetSet = finalProperties[setIdx]!;
+    const targetSet = { ...finalProperties[setIdx]! };
     // Enforce size limit
     const maxSize = getSetSize(targetSet.color);
     if (targetSet.cards.length >= maxSize && Number.isFinite(maxSize)) {
       return { ok: false, error: 'Target set is already full.' };
     }
     
-    // Update color if moving to a specific color set
-    targetSet.cards.push(cardToMove);
+    targetSet.cards = [...targetSet.cards, cardToMove];
+    // Update set color if moving a card to a set with a different color (shouldn't happen with current UI but for robustness)
     if (targetSet.color !== targetColor) {
-        // This shouldn't really happen if validation above passed, but for safety:
-        return { ok: false, error: 'Mismatched target color.' };
+         return { ok: false, error: 'Mismatched target color.' };
     }
+    finalProperties[setIdx] = targetSet;
   }
 
   return { 

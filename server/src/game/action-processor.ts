@@ -272,6 +272,21 @@ export class ActionProcessor {
     // STEP 6: Create snapshot
     const snapshot = createGameStateSnapshot(nextState, sequence);
 
+    // STEP 8: DEBUG LOGGING (requested for property validation)
+    console.log('--- GAME STATE DEBUG ---');
+    nextState.players.forEach(p => {
+      console.log(`Player: ${p.name} (${p.id})`);
+      p.properties.forEach(set => {
+        const realCount = set.cards.filter(c => c.type === 'property').length;
+        const wildCount = set.cards.filter(c => c.type === 'wildcard').length;
+        console.log(`  Set ${set.setId}: color=${set.color}, cards=${set.cards.length}, real=${realCount}, wild=${wildCount}, complete=${set.isComplete}`);
+      });
+      const completeSets = p.properties.filter(s => s.isComplete).length;
+      console.log(`  COMPLETE SETS: ${completeSets}`);
+    });
+    if (nextState.winner) console.log(`WINNER ANNOUNCED: ${nextState.winner}`);
+    console.log('------------------------');
+
     // STEP 7: Return result
     return {
       success: true,

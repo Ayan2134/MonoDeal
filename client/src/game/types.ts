@@ -58,6 +58,7 @@ export type ActionCard = CardBase & {
 export type WildcardCard = CardBase & {
   type: CardType.Wildcard;
   colors: PropertyColor[];
+  assignedColor?: PropertyColor;
 };
 
 export type Card = PropertyCard | MoneyCard | ActionCard | WildcardCard;
