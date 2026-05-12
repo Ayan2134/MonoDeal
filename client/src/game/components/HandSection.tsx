@@ -44,6 +44,8 @@ export function HandSection({
   const [forcedDealInitiatorCard, setForcedDealInitiatorCard] = useState<{ playerId: string; cardId: string } | null>(null);
   const [buildingCardId, setBuildingCardId] = useState<string | null>(null);
   const [buildingType, setBuildingType] = useState<'house' | 'hotel' | null>(null);
+  const [doubleRentCardId, setDoubleRentCardId] = useState<string | null>(null);
+  const [pendingDTRId, setPendingDTRId] = useState<string | null>(null);
 
   const currentPlayer = players.find(p => p.id === playerId);
   
@@ -75,8 +77,13 @@ export function HandSection({
       setBuildingType(actionId as 'house' | 'hotel');
       return;
     }
+    if (actionId === 'double-the-rent') {
+      setDoubleRentCardId(cardId);
+      setPendingDTRId(cardId);
+      return;
+    }
 
-    const requiresTarget = actionId && ['debt-collector', 'sly-deal', 'forced-swap', 'rent-multiplier'].includes(actionId);
+    const requiresTarget = actionId && ['debt-collector', 'sly-deal', 'forced-swap'].includes(actionId);
     
     if (requiresTarget) {
       setTargetActionId(cardId);
@@ -256,8 +263,15 @@ export function HandSection({
           opponents={players.filter(p => p.id !== playerId)}
           hand={currentPlayer?.hand || []}
           actionsRemaining={actionsRemaining}
-          onConfirm={handleRentConfirm}
-          onCancel={() => setRentCardId(null)}
+          initialModifierIds={pendingDTRId ? [pendingDTRId] : []}
+          onConfirm={(setId, targetPlayerId, modifierCardIds) => {
+            handleRentConfirm(setId, targetPlayerId, modifierCardIds);
+            setPendingDTRId(null);
+          }}
+          onCancel={() => {
+            setRentCardId(null);
+            setPendingDTRId(null);
+          }}
         />
       )}
 
@@ -335,6 +349,55 @@ export function HandSection({
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+      {doubleRentCardId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-xl border border-brass/30 bg-[#181c20] p-6 shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold text-brass uppercase tracking-wider">Select Rent Card to Double</h3>
+            
+            {cards.filter(c => c.type === CardType.Action && (c as any).actionId === 'rent').length === 0 ? (
+              <div className="mb-6">
+                <p className="text-sm text-red-400 mb-4">You have no Rent cards in your hand to use with Double The Rent.</p>
+                <button
+                  onClick={() => {
+                    setDoubleRentCardId(null);
+                    setPendingDTRId(null);
+                  }}
+                  className="w-full rounded-lg bg-white/5 py-2 text-white font-bold hover:bg-white/10"
+                >
+                  Back
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2 mb-6">
+                  {cards.filter(c => c.type === CardType.Action && (c as any).actionId === 'rent').map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => {
+                        setRentCardId(c.id);
+                        setDoubleRentCardId(null);
+                      }}
+                      className="w-full rounded-lg bg-white/5 px-4 py-3 text-left font-bold text-white transition hover:bg-brass hover:text-ink flex justify-between items-center"
+                    >
+                      <span>{c.name}</span>
+                      <span className="text-[10px] opacity-60">VALUE {c.value}M</span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => {
+                    setDoubleRentCardId(null);
+                    setPendingDTRId(null);
+                  }}
+                  className="w-full rounded-lg border border-white/10 px-4 py-2 font-bold text-white/60 hover:bg-white/5"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

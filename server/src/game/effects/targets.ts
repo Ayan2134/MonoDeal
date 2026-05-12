@@ -18,5 +18,6 @@ export function normalizeTargets(targets?: EffectTargetSelection): EffectTargetS
     propertyCardIds: targets?.propertyCardIds ?? [],
     propertySetColors: targets?.propertySetColors ?? [],
     propertySetIds: targets?.propertySetIds ?? [],
+    modifierCardIds: targets?.modifierCardIds ?? [],
   };
 }

@@ -47,5 +47,5 @@ export const ACTION_SEEDS = [
     // Hotel — place on a complete set that already has a house for +4M rent
     ...repeatAction('Hotel', 'hotel', 'building', 4, 3, { attachable: true }),
     // Double The Rent — play with a rent card to double the amount (costs 1 extra action)
-    ...repeatAction('Double The Rent', 'double-the-rent', 'modifier', 1, 2, { modifierTarget: 'rent' }),
+    ...repeatAction('Double The Rent', 'double-the-rent', 'modifier', 2, 2, { modifierTarget: 'rent' }),
 ];

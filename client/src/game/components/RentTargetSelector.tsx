@@ -7,6 +7,7 @@ type RentTargetSelectorProps = {
   opponents: { id: string; name: string }[];
   hand: Card[];
   actionsRemaining: number;
+  initialModifierIds?: string[];
   onConfirm: (setId: string, targetPlayerId?: string, modifierCardIds?: string[]) => void;
   onCancel: () => void;
 };
@@ -33,12 +34,13 @@ export function RentTargetSelector({
   opponents,
   hand,
   actionsRemaining,
+  initialModifierIds = [],
   onConfirm,
   onCancel,
 }: RentTargetSelectorProps) {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
-  const [selectedModifierIds, setSelectedModifierIds] = useState<string[]>([]);
+  const [selectedModifierIds, setSelectedModifierIds] = useState<string[]>(initialModifierIds);
 
   const isWildcard = !!card.wildcardRent;
   const supportedColors = card.supportedColors || [];

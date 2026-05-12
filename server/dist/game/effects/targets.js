@@ -13,5 +13,6 @@ export function normalizeTargets(targets) {
         propertyCardIds: targets?.propertyCardIds ?? [],
         propertySetColors: targets?.propertySetColors ?? [],
         propertySetIds: targets?.propertySetIds ?? [],
+        modifierCardIds: targets?.modifierCardIds ?? [],
     };
 }
