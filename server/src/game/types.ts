@@ -24,6 +24,7 @@ export type CardBase = {
   id: CardId;
   type: CardType;
   name: string;
+  value: number;
 };
 
 export type PropertyCard = CardBase & {
@@ -33,13 +34,17 @@ export type PropertyCard = CardBase & {
 
 export type MoneyCard = CardBase & {
   type: CardType.Money;
-  value: number;
 };
 
 export type ActionCard = CardBase & {
   type: CardType.Action;
   actionId: string;
-  value?: number;
+  actionCategory?: 'payment' | 'property' | 'counter' | 'utility' | 'modifier' | 'building';
+  supportedColors?: PropertyColor[];
+  affectsAllPlayers?: boolean;
+  wildcardRent?: boolean;
+  attachable?: boolean;
+  modifierTarget?: string;
 };
 
 export type WildcardCard = CardBase & {

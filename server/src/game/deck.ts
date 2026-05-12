@@ -1,50 +1,53 @@
-import { starterCards } from './cardData.js';
+/**
+ * DECK BUILDER
+ *
+ * Creates runtime Card instances from the card seed registry.
+ * Handles shuffling, drawing, and deck refilling from the discard pile.
+ */
+
+import { ALL_CARD_SEEDS, type CardSeed } from './cards/registry.js';
 import { CardType, type Card, type DeckState } from './types.js';
 
-const CARD_ID_PREFIX: Record<CardType, string> = {
-  [CardType.Property]: 'prop',
-  [CardType.Money]: 'money',
-  [CardType.Action]: 'action',
-  [CardType.Wildcard]: 'wild',
-};
-
-function buildCardId(type: CardType, index: number) {
-  return `${CARD_ID_PREFIX[type]}-${index + 1}`;
-}
-
-function createCardFromSeed(seed: (typeof starterCards)[number], index: number): Card {
-  const id = buildCardId(seed.type, index);
+function createCardFromSeed(seed: CardSeed): Card {
+  const id = seed.seedId;
 
   if (seed.type === CardType.Property) {
-    if (!seed.color) {
-      throw new Error('Property card missing color.');
-    }
-    return { id, type: seed.type, name: seed.name, color: seed.color };
+    if (!seed.color) throw new Error(`Property card "${seed.name}" missing color.`);
+    if (seed.value === undefined) throw new Error(`Property card "${seed.name}" missing value.`);
+    return { id, type: seed.type, name: seed.name, color: seed.color, value: seed.value };
   }
 
   if (seed.type === CardType.Money) {
-    if (typeof seed.value !== 'number') {
-      throw new Error('Money card missing value.');
-    }
+    if (typeof seed.value !== 'number') throw new Error(`Money card "${seed.name}" missing value.`);
     return { id, type: seed.type, name: seed.name, value: seed.value };
   }
 
   if (seed.type === CardType.Action) {
-    if (!seed.actionId) {
-      throw new Error('Action card missing actionId.');
-    }
-    return { id, type: seed.type, name: seed.name, actionId: seed.actionId, value: seed.value };
+    if (!seed.actionId) throw new Error(`Action card "${seed.name}" missing actionId.`);
+    if (seed.value === undefined) throw new Error(`Action card "${seed.name}" missing value.`);
+    return {
+      id,
+      type: seed.type,
+      name: seed.name,
+      actionId: seed.actionId,
+      value: seed.value,
+      actionCategory: seed.actionCategory,
+      supportedColors: seed.supportedColors,
+      affectsAllPlayers: seed.affectsAllPlayers,
+      wildcardRent: seed.wildcardRent,
+      attachable: seed.attachable,
+      modifierTarget: seed.modifierTarget,
+    };
   }
 
-  if (!seed.colors || seed.colors.length === 0) {
-    throw new Error('Wildcard card missing colors.');
-  }
-
-  return { id, type: seed.type, name: seed.name, colors: seed.colors };
+  // Wildcard
+  if (!seed.colors || seed.colors.length === 0) throw new Error(`Wildcard card "${seed.name}" missing colors.`);
+  if (seed.value === undefined) throw new Error(`Wildcard card "${seed.name}" missing value.`);
+  return { id, type: seed.type, name: seed.name, colors: seed.colors, value: seed.value };
 }
 
 export function createDeck(): Card[] {
-  return starterCards.map((seed: (typeof starterCards)[number], index: number) => createCardFromSeed(seed, index));
+  return ALL_CARD_SEEDS.map(createCardFromSeed);
 }
 
 export function shuffleDeck(deck: Card[], rng: () => number = Math.random): Card[] {

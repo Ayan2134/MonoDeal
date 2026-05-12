@@ -5,6 +5,7 @@ import { env } from '../config/env';
 import { getPlayerId } from '../session/playerSession';
 import { useLobbyStore } from '../store/lobbyStore';
 import { PageHeader } from '../shared/PageHeader';
+import { GameTable } from '../game/GameTable';
 import type { RoomSummary } from '../socket/socket';
 
 export function LobbyPage() {
@@ -71,6 +72,10 @@ export function LobbyPage() {
   const isHost = room?.hostId === playerId;
   const inviteOrigin = env.appUrl;
   const inviteUrl = room ? `${inviteOrigin}${room.invitePath}` : '';
+
+  if (room?.status === 'started') {
+    return <GameTable roomId={room.roomId} />;
+  }
 
   return (
     <section className="space-y-8">
@@ -144,7 +149,7 @@ export function LobbyPage() {
               <button
                 onClick={handleStartGame}
                 className="inline-flex items-center gap-2 rounded-md bg-brass px-4 py-2 font-semibold text-ink transition hover:bg-[#e6bc72] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isLoading || room?.status === 'started'}
+                disabled={isLoading}
                 type="button"
               >
                 <Play className="h-4 w-4" />

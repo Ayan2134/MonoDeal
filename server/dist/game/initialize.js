@@ -28,13 +28,22 @@ export function initializeGameState(room, rng = Math.random) {
     const dealt = dealStartingHands(gamePlayers, deck, STARTING_HAND_SIZE);
     return {
         roomId: room.roomId,
+        version: 0,
         players: dealt.players,
         deck: dealt.deck,
         discardPile: [],
+        actionStack: [],
+        pendingActions: [],
+        activeInteractions: [],
+        responseWindow: {
+            isOpen: false,
+            deadlineAt: null,
+        },
         currentTurnPlayerId: chooseRandomFirstPlayer(dealt.players, rng),
         turnPhase: TurnPhase.Draw,
         actionsRemaining: STARTING_ACTIONS,
         winner: null,
         gameStarted: true,
+        gameEnded: false,
     };
 }

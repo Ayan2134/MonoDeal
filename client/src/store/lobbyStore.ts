@@ -104,6 +104,17 @@ export const useLobbyStore = create<LobbyState>((set, get) => ({
       set({ error: message });
     });
 
+    // PLAYER CONNECTION STATUS IN LOBBY
+    // Broadcast when player reconnects (auto-join room again)
+    socket.on('player-reconnected', (payload) => {
+      logSocketEvent('player-reconnected', { playerId: payload.playerId, playerName: payload.playerName });
+    });
+
+    // Broadcast when player disconnects in lobby
+    socket.on('player-disconnected', (payload) => {
+      logSocketEvent('player-disconnected', { playerId: payload.playerId, playerName: payload.playerName });
+    });
+
     set({ isListening: true });
   },
 

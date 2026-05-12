@@ -31,6 +31,8 @@ function buildTurnUpdate(state: GameState): TurnUpdate {
   };
 }
 
+export { buildTurnUpdate };
+
 function findNextTurnPlayerId(state: GameState): string | null {
   if (!state.currentTurnPlayerId) {
     return state.players[0]?.id ?? null;
@@ -56,6 +58,14 @@ function findNextTurnPlayerId(state: GameState): string | null {
 export function startTurn(state: GameState, playerId: string): GameStateResult {
   if (!state.gameStarted) {
     return { ok: false, error: 'Game has not started.' };
+  }
+
+  if (state.gameEnded) {
+    return { ok: false, error: 'Game has ended.' };
+  }
+
+  if (state.responseWindow.isOpen) {
+    return { ok: false, error: 'Wait for the response window to resolve.' };
   }
 
   if (state.currentTurnPlayerId !== playerId) {
@@ -94,9 +104,17 @@ export function startTurn(state: GameState, playerId: string): GameStateResult {
 }
 
 // End phase: current player ends turn and advances to the next player.
-export function endTurn(state: GameState, playerId: string): GameStateResult {
+export function endTurn(state: GameState, playerId: string, discardCardIds?: string[]): GameStateResult {
   if (!state.gameStarted) {
     return { ok: false, error: 'Game has not started.' };
+  }
+
+  if (state.gameEnded) {
+    return { ok: false, error: 'Game has ended.' };
+  }
+
+  if (state.responseWindow.isOpen) {
+    return { ok: false, error: 'Wait for the response window to resolve.' };
   }
 
   if (state.currentTurnPlayerId !== playerId) {
@@ -105,6 +123,42 @@ export function endTurn(state: GameState, playerId: string): GameStateResult {
 
   if (state.turnPhase === TurnPhase.Draw) {
     return { ok: false, error: 'Draw phase must complete before ending turn.' };
+  }
+
+  const player = state.players.find(p => p.id === playerId);
+  if (!player) {
+    return { ok: false, error: 'Player not found.' };
+  }
+
+  const maxHandSize = 7;
+  const currentHandSize = player.hand.length;
+
+  if (currentHandSize > maxHandSize) {
+    const excessCount = currentHandSize - maxHandSize;
+    if (!discardCardIds || discardCardIds.length !== excessCount) {
+      return { ok: false, error: `You must discard exactly ${excessCount} cards to end your turn.` };
+    }
+
+    // Validate that the player owns all discarded cards
+    const ownsAll = discardCardIds.every(id => player.hand.some(c => c.id === id));
+    if (!ownsAll) {
+      return { ok: false, error: 'You do not own all the cards you are trying to discard.' };
+    }
+
+    // Apply discards
+    const updatedHand = player.hand.filter(c => !discardCardIds.includes(c.id));
+    const discardedCards = player.hand.filter(c => discardCardIds.includes(c.id));
+
+    state.players = state.players.map(p => {
+      if (p.id === playerId) {
+        return { ...p, hand: updatedHand };
+      }
+      return p;
+    });
+
+    state.discardPile.push(...discardedCards);
+  } else if (discardCardIds && discardCardIds.length > 0) {
+    return { ok: false, error: 'You cannot discard cards unless you exceed the hand limit.' };
   }
 
   const nextPlayerId = findNextTurnPlayerId(state);
@@ -122,6 +176,10 @@ export function endTurn(state: GameState, playerId: string): GameStateResult {
 export function consumeAction(state: GameState, playerId: string, count = 1): GameStateResult {
   if (!state.gameStarted) {
     return { ok: false, error: 'Game has not started.' };
+  }
+
+  if (state.gameEnded) {
+    return { ok: false, error: 'Game has ended.' };
   }
 
   if (state.currentTurnPlayerId !== playerId) {

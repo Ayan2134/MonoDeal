@@ -59,3 +59,27 @@ export function validateTurnPayload(payload) {
     }
     return null;
 }
+export function validatePlayCardPayload(payload) {
+    if (!validatePlayerId(payload.playerId)) {
+        return 'Invalid player session. Refresh and try again.';
+    }
+    if (!payload.roomId.trim()) {
+        return 'Missing room id.';
+    }
+    if (!payload.cardId.trim()) {
+        return 'Missing card id.';
+    }
+    return null;
+}
+export function validateRespondToActionPayload(payload) {
+    if (!validatePlayerId(payload.playerId)) {
+        return 'Invalid player session. Refresh and try again.';
+    }
+    if (!payload.roomId.trim()) {
+        return 'Missing room id.';
+    }
+    if (!payload.cardId.trim()) {
+        return 'Missing counter card id.';
+    }
+    return null;
+}

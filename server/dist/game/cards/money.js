@@ -1,0 +1,28 @@
+/**
+ * MONEY CARD SEEDS (20 cards)
+ *
+ * Official Monopoly Deal money distribution:
+ * - 6× 1M
+ * - 5× 2M
+ * - 3× 3M
+ * - 3× 4M
+ * - 2× 5M
+ * - 1× 10M
+ */
+import { CardType } from '../types.js';
+function repeatMoney(value, count) {
+    return Array.from({ length: count }, (_, i) => ({
+        type: CardType.Money,
+        name: `${value}M`,
+        value,
+        seedId: `money-${value}m-${i + 1}`,
+    }));
+}
+export const MONEY_SEEDS = [
+    ...repeatMoney(1, 6),
+    ...repeatMoney(2, 5),
+    ...repeatMoney(3, 3),
+    ...repeatMoney(4, 3),
+    ...repeatMoney(5, 2),
+    ...repeatMoney(10, 1),
+];

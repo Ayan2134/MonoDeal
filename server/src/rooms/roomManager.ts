@@ -4,20 +4,27 @@ import {
   normalizeRoomCode,
   validateCreateRoomPayload,
   validateJoinRoomPayload,
+  validatePlayCardPayload,
+  validateRespondToActionPayload,
   validateReconnectPayload,
   validateStartGamePayload,
   validateTurnPayload,
 } from './validation.js';
 import { initializeGameState } from '../game/initialize.js';
 import { endTurn, startTurn, type GameStateResult } from '../game/turn.js';
+import { playCard, type PlayCardResult } from '../game/playCard.js';
+import { resolvePendingStack, respondWithJustSayNo } from '../game/stack.js';
+import type { GameState } from '../game/state.js';
 import type {
   CreateRoomPayload,
   EndTurnPayload,
   JoinRoomPayload,
   LeaveRoomPayload,
   Player,
+  PlayCardPayload,
   PublicRoom,
   ReconnectPlayerPayload,
+  RespondToActionPayload,
   Room,
   RoomResult,
   StartTurnPayload,
@@ -58,6 +65,7 @@ export class RoomManager {
       isHost: true,
       status: 'connected',
       socketId,
+      lastSeen: now,
     };
     const room: Room = {
       roomId,
@@ -110,14 +118,16 @@ export class RoomManager {
 
     this.leaveCurrentRoom(payload.playerId);
 
+    const now = Date.now();
     room.players.push({
       playerId: payload.playerId,
       name: normalizePlayerName(payload.playerName),
       isHost: false,
       status: 'connected',
       socketId,
+      lastSeen: now,
     });
-    room.updatedAt = Date.now();
+    room.updatedAt = now;
     this.roomIdByPlayerId.set(payload.playerId, room.roomId);
 
     return { ok: true, room: this.toPublicRoom(room) };
@@ -241,8 +251,149 @@ export class RoomManager {
     return result;
   }
 
+  playCard(payload: PlayCardPayload): PlayCardResult {
+    const validationError = validatePlayCardPayload(payload);
+
+    if (validationError) {
+      return { ok: false, error: validationError };
+    }
+
+    const room = this.roomsById.get(payload.roomId);
+
+    if (!room || !room.gameState) {
+      return { ok: false, error: 'Game state not found.' };
+    }
+
+    const player = room.players.find((currentPlayer) => currentPlayer.playerId === payload.playerId);
+
+    if (!player || player.status !== 'connected') {
+      return { ok: false, error: 'Player is not connected.' };
+    }
+
+    const result = playCard(room.gameState, {
+      roomId: payload.roomId,
+      playerId: payload.playerId,
+      cardId: payload.cardId,
+      destination: payload.destination,
+      propertySetColor: payload.propertySetColor,
+      targets: payload.targets,
+    });
+
+    if (result.ok) {
+      room.gameState = result.gameState;
+      room.updatedAt = Date.now();
+    }
+
+    return result;
+  }
+
+  respondToAction(payload: RespondToActionPayload): GameStateResult {
+    const validationError = validateRespondToActionPayload(payload);
+
+    if (validationError) {
+      return { ok: false, error: validationError };
+    }
+
+    const room = this.roomsById.get(payload.roomId);
+
+    if (!room || !room.gameState) {
+      return { ok: false, error: 'Game state not found.' };
+    }
+
+    const player = room.players.find((currentPlayer) => currentPlayer.playerId === payload.playerId);
+
+    if (!player || player.status !== 'connected') {
+      return { ok: false, error: 'Player is not connected.' };
+    }
+
+    const response = respondWithJustSayNo(room.gameState, payload.playerId, payload.cardId, payload.targetStackEntryId);
+
+    if (!response.ok) {
+      return response;
+    }
+
+    room.gameState = response.state;
+    room.updatedAt = Date.now();
+
+    return {
+      ok: true,
+      gameState: room.gameState,
+      turn: {
+        roomId: room.gameState.roomId,
+        currentTurnPlayerId: room.gameState.currentTurnPlayerId,
+        actionsRemaining: room.gameState.actionsRemaining,
+        turnPhase: room.gameState.turnPhase,
+      },
+    };
+  }
+
+  resolvePendingAction(roomId: string): GameStateResult {
+    const room = this.roomsById.get(roomId);
+
+    if (!room || !room.gameState) {
+      return { ok: false, error: 'Game state not found.' };
+    }
+
+    const resolved = resolvePendingStack(room.gameState);
+
+    if (!resolved.ok) {
+      return resolved;
+    }
+
+    room.gameState = resolved.state;
+    room.updatedAt = Date.now();
+
+    return {
+      ok: true,
+      gameState: room.gameState,
+      turn: {
+        roomId: room.gameState.roomId,
+        currentTurnPlayerId: room.gameState.currentTurnPlayerId,
+        actionsRemaining: room.gameState.actionsRemaining,
+        turnPhase: room.gameState.turnPhase,
+      },
+    };
+  }
+
   getGameState(roomId: string) {
     return this.roomsById.get(roomId)?.gameState ?? null;
+  }
+
+  /**
+   * Update game state for a room
+   *
+   * ACTION PIPELINE:
+   * Called by action processor after action is applied
+   * Updates room's game state and updates timestamp
+   * Used as single point for state updates to ensure consistency
+   */
+  updateGameState(roomId: string, gameState: GameState): void {
+    const room = this.roomsById.get(roomId);
+
+    if (room) {
+      room.gameState = gameState;
+      room.updatedAt = Date.now();
+    }
+  }
+
+  /**
+   * Get full game state for reconnecting player
+   *
+   * RECONNECT SYNC:
+   * Returns complete game state to restore client UI exactly as it was before disconnect.
+   * Includes:
+   * - Current hand (cards with IDs)
+   * - Bank (property cards + money)
+   * - Properties (organized by color, completion status)
+   * - Game phase, turn ownership, actions remaining
+   * - Pending stack and response window state
+   * - All players' public state (names, status, bank count)
+   *
+   * This allows client to restore UI without requiring separate request/response cycles.
+   */
+  getGameStateForReconnect(roomId: string): GameState | null {
+    const gameState = this.roomsById.get(roomId)?.gameState;
+    return gameState ? { ...gameState } : null;
   }
 
   markDisconnected(socketId: string, onExpire: (room: PublicRoom | null) => void): PublicRoom[] {
@@ -255,14 +406,22 @@ export class RoomManager {
         continue;
       }
 
+      // DISCONNECT HANDLING WITH GRACE PERIOD:
       // The player stays in the room during the grace period so refreshes and
       // short network drops can reclaim the same seat by sending reconnect-player
       // with the persistent playerId. This avoids duplicate players because the
       // old room slot is updated instead of appending a new player.
+      //
+      // TIMEOUT BEHAVIOR:
+      // - If player reconnects within grace period: clear timer, restore connection
+      // - If grace period expires: remove player, trigger cleanup callback
+      // - Grace period is longer for active games (10 min) than lobby (1 min)
+      const now = Date.now();
       player.status = 'disconnected';
       player.socketId = undefined;
-      player.disconnectedAt = Date.now();
-      room.updatedAt = Date.now();
+      player.lastSeen = now;
+      player.disconnectedAt = now;
+      room.updatedAt = now;
       updatedRooms.push(this.toPublicRoom(room));
       this.scheduleDisconnectedPlayerRemoval(room.roomId, player.playerId, onExpire);
     }
@@ -292,10 +451,17 @@ export class RoomManager {
     // A successful reconnect cancels the pending removal timer and replaces the
     // stale socket.id. The stable identity remains player.playerId, which is
     // generated in the browser and stored in localStorage.
+    //
+    // SESSION RECOVERY:
+    // 1. Clear removal timer (player is reconnecting before grace period expired)
+    // 2. Update lastSeen to current time (player is active again)
+    // 3. Mark connected=true and clear disconnectedAt (session restored)
+    // 4. Reattach new socket.id (Socket.IO gave a new one)
     this.clearCleanupTimer(player.playerId);
     player.name = playerName ? normalizePlayerName(playerName) : player.name;
     player.status = 'connected';
     player.socketId = socketId;
+    player.lastSeen = Date.now();
     player.disconnectedAt = undefined;
     room.updatedAt = Date.now();
     this.roomIdByPlayerId.set(player.playerId, room.roomId);

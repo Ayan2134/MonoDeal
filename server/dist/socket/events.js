@@ -1,4 +1,9 @@
 import { roomManager } from '../rooms/roomManager.js';
+import { toStackSnapshot } from '../game/stack.js';
+import { processPlayCard, processRespondToAction, processStartTurn, processEndTurn, processResolveInteraction, processRearrangeProperties } from '../game/action-processing.js';
+const responseTimers = new Map();
+// Track turn disconnect timers to auto-end stuck turns
+const turnDisconnectTimers = new Map();
 function logSocketEvent(message, details) {
     if (details) {
         console.info(`[socket] ${message}`, details);
@@ -32,6 +37,52 @@ function broadcastTurn(io, turn) {
     logSocketEvent('emit turn-updated', { roomId: turn.roomId, turnPlayer: turn.currentTurnPlayerId });
     io.to(turn.roomId).emit('turn-updated', turn);
 }
+function broadcastStack(io, gameState) {
+    const snapshot = toStackSnapshot(gameState);
+    io.to(snapshot.roomId).emit('stack-updated', snapshot);
+    io.to(snapshot.roomId).emit('response-window-updated', {
+        roomId: snapshot.roomId,
+        isOpen: snapshot.responseOpen,
+        deadlineAt: snapshot.responseDeadlineAt,
+    });
+}
+function clearResponseResolutionTimer(roomId) {
+    const timer = responseTimers.get(roomId);
+    if (timer) {
+        clearTimeout(timer);
+        responseTimers.delete(roomId);
+    }
+}
+function scheduleResponseResolution(io, roomId, deadlineAt) {
+    clearResponseResolutionTimer(roomId);
+    if (!deadlineAt) {
+        return;
+    }
+    const delay = Math.max(0, deadlineAt - Date.now());
+    const timer = setTimeout(() => {
+        responseTimers.delete(roomId);
+        const resolved = roomManager.resolvePendingAction(roomId);
+        if (!resolved.ok) {
+            logSocketEvent('resolve-pending-action failed', { roomId, error: resolved.error });
+            return;
+        }
+        broadcastGameState(io, resolved.gameState);
+        broadcastTurn(io, resolved.turn);
+        broadcastStack(io, resolved.gameState);
+        if (resolved.gameState.gameEnded) {
+            broadcastWinner(io, resolved.gameState);
+        }
+    }, delay);
+    responseTimers.set(roomId, timer);
+}
+function broadcastWinner(io, gameState) {
+    if (!gameState.winner) {
+        return;
+    }
+    logSocketEvent('emit winner-announced', { roomId: gameState.roomId, winner: gameState.winner });
+    io.to(gameState.roomId).emit('winner-announced', { roomId: gameState.roomId, winner: gameState.winner });
+    io.to(gameState.roomId).emit('game-ended', gameState);
+}
 function handleUnexpectedError(socket, callback, error) {
     logSocketError('handler error', error, { socketId: socket.id });
     const result = { ok: false, error: 'Unexpected server error. Please try again.' };
@@ -42,6 +93,50 @@ function handleUnexpectedGameError(socket, callback, error) {
     logSocketError('handler error', error, { socketId: socket.id });
     const result = { ok: false, error: 'Unexpected server error. Please try again.' };
     callback?.(result);
+}
+function handleUnexpectedPlayError(socket, callback, error) {
+    logSocketError('handler error', error, { socketId: socket.id });
+    const result = { ok: false, error: 'Unexpected server error. Please try again.' };
+    callback?.(result);
+}
+function scheduleTurnDisconnectTimeout(io, roomId, playerId) {
+    // AUTO-END STUCK TURNS:
+    // If a player is disconnected during their turn for more than 30 seconds,
+    // automatically end their turn so the game doesn't stall
+    // This only triggers if they don't reconnect within 30 seconds
+    const timerKey = `${roomId}:${playerId}`;
+    // Clear any existing timer
+    const existingTimer = turnDisconnectTimers.get(timerKey);
+    if (existingTimer) {
+        clearTimeout(existingTimer);
+    }
+    const timer = setTimeout(() => {
+        const gameState = roomManager.getGameState(roomId);
+        // Only auto-end turn if player is still disconnected and still owns the turn
+        if (gameState && gameState.currentTurnPlayerId === playerId) {
+            logSocketEvent('auto-ending stuck turn due to prolonged disconnect', { roomId, playerId });
+            const result = processEndTurn({
+                playerId,
+                roomId,
+                clientVersion: gameState.version,
+            });
+            if (result.ok) {
+                broadcastGameState(io, result.gameState);
+                broadcastTurn(io, result.turn);
+                logSocketEvent('auto-ended turn successfully', { roomId, playerId });
+            }
+        }
+        turnDisconnectTimers.delete(timerKey);
+    }, 30_000); // 30 second grace period before auto-ending turn
+    turnDisconnectTimers.set(timerKey, timer);
+}
+function clearTurnDisconnectTimeout(roomId, playerId) {
+    const timerKey = `${roomId}:${playerId}`;
+    const timer = turnDisconnectTimers.get(timerKey);
+    if (timer) {
+        clearTimeout(timer);
+        turnDisconnectTimers.delete(timerKey);
+    }
 }
 export function registerSocketHandlers(io, socket) {
     // Debugging flow: log inbound events, validate, emit acknowledgements, then
@@ -93,19 +188,68 @@ export function registerSocketHandlers(io, socket) {
     socket.on('reconnect-player', (payload, callback) => {
         try {
             logSocketEvent('reconnect-player', { socketId: socket.id, playerId: payload.playerId, roomId: payload.roomId });
-            // Refreshing the browser creates a new socket.id. This event binds that new
-            // socket back to the existing playerId before the cleanup timeout expires.
+            // RECONNECTION FLOW:
+            // 1. Browser refresh creates new socket.id (Socket.IO gives new ID each time)
+            // 2. Client sends reconnect-player with persistent playerId + roomId
+            // 3. Server validates playerId exists in room
+            // 4. Server updates socket binding and clears removal timer
+            // 5. Server sends back room + full game state (if game is active)
+            // 6. Client hydrates store and restores UI exactly as it was
             const result = roomManager.reconnectPlayer(payload, socket.id);
-            if (result.ok) {
-                socket.join(result.room.roomId);
-                logSocketEvent('room joined', { socketId: socket.id, roomId: result.room.roomId, roomCode: result.room.roomCode });
+            if (!result.ok) {
+                logSocketEvent('reconnect-player failed', { socketId: socket.id, error: result.error });
                 callback(result);
-                broadcastRoom(io, result.room);
+                emitRoomResult(socket, result);
                 return;
             }
-            logSocketEvent('reconnect-player failed', { socketId: socket.id, error: result.error });
-            callback(result);
-            emitRoomResult(socket, result);
+            // SUCCESSFUL RECONNECTION
+            socket.join(result.room.roomId);
+            logSocketEvent('room rejoined', { socketId: socket.id, roomId: result.room.roomId, roomCode: result.room.roomCode });
+            // If game is in progress, send full game state to reconnecting client
+            const gameState = roomManager.getGameStateForReconnect(result.room.roomId);
+            const turnOwned = gameState?.currentTurnPlayerId === payload.playerId;
+            // GAME STATE SYNC CALLBACK:
+            // Send game state to the reconnecting client so it can restore UI
+            // Include turnOwned flag so client knows if they should trigger start-turn
+            const reconnectCallback = {
+                ok: true,
+                room: result.room,
+                ...(gameState && { gameState }),
+                ...(gameState && { turnOwned }),
+            };
+            callback(reconnectCallback);
+            // GAME STATE SYNC EVENT:
+            // Send full game state to reconnecting player
+            // Client will hydrate Zustand store with this state
+            if (gameState) {
+                socket.emit('game-state-sync', {
+                    roomId: result.room.roomId,
+                    gameState,
+                    turnOwned,
+                });
+            }
+            // BROADCAST RECONNECTION:
+            // Notify other players that this player reconnected so they know
+            // the game can resume (turn is no longer paused waiting for them)
+            const room = result.room;
+            const reconnectingPlayer = room.players.find((p) => p.playerId === payload.playerId);
+            if (reconnectingPlayer) {
+                // Clear the turn disconnect timeout since player reconnected
+                clearTurnDisconnectTimeout(result.room.roomId, payload.playerId);
+                logSocketEvent('emit player-reconnected', { roomId: result.room.roomId, playerId: payload.playerId });
+                io.to(result.room.roomId).emit('player-reconnected', {
+                    roomId: result.room.roomId,
+                    playerId: payload.playerId,
+                    playerName: reconnectingPlayer.name,
+                });
+            }
+            // BROADCAST UPDATED ROOM:
+            // All clients get room update (turn ownership, turn phase, etc.)
+            broadcastRoom(io, result.room);
+            // If game is in progress, broadcast game state to all players
+            if (gameState) {
+                broadcastGameState(io, gameState);
+            }
         }
         catch (error) {
             handleUnexpectedError(socket, callback, error);
@@ -160,7 +304,7 @@ export function registerSocketHandlers(io, socket) {
     socket.on('start-turn', (payload, callback) => {
         try {
             logSocketEvent('start-turn', { socketId: socket.id, playerId: payload.playerId, roomId: payload.roomId });
-            const result = roomManager.startTurn(payload);
+            const result = processStartTurn(payload);
             if (result.ok) {
                 callback(result);
                 broadcastGameState(io, result.gameState);
@@ -177,7 +321,7 @@ export function registerSocketHandlers(io, socket) {
     socket.on('end-turn', (payload, callback) => {
         try {
             logSocketEvent('end-turn', { socketId: socket.id, playerId: payload.playerId, roomId: payload.roomId });
-            const result = roomManager.endTurn(payload);
+            const result = processEndTurn(payload);
             if (result.ok) {
                 callback(result);
                 broadcastGameState(io, result.gameState);
@@ -191,15 +335,137 @@ export function registerSocketHandlers(io, socket) {
             handleUnexpectedGameError(socket, callback, error);
         }
     });
+    socket.on('play-card', (payload, callback) => {
+        try {
+            logSocketEvent('play-card', { socketId: socket.id, playerId: payload.playerId, roomId: payload.roomId, cardId: payload.cardId });
+            const result = processPlayCard(payload);
+            if (result.ok) {
+                callback(result);
+                broadcastGameState(io, result.gameState);
+                broadcastTurn(io, result.turn);
+                broadcastStack(io, result.gameState);
+                if (result.gameState.responseWindow.isOpen) {
+                    scheduleResponseResolution(io, result.gameState.roomId, result.gameState.responseWindow.deadlineAt);
+                }
+                else {
+                    clearResponseResolutionTimer(result.gameState.roomId);
+                }
+                if (result.gameState.gameEnded) {
+                    broadcastWinner(io, result.gameState);
+                }
+                return;
+            }
+            logSocketEvent('play-card failed', { socketId: socket.id, error: result.error });
+            callback(result);
+        }
+        catch (error) {
+            handleUnexpectedPlayError(socket, callback, error);
+        }
+    });
+    socket.on('rearrange-properties', (payload, callback) => {
+        try {
+            logSocketEvent('rearrange-properties', { socketId: socket.id, playerId: payload.playerId, roomId: payload.roomId, cardId: payload.cardId });
+            const result = processRearrangeProperties(payload);
+            if (result.ok) {
+                callback(result);
+                broadcastGameState(io, result.gameState);
+                broadcastTurn(io, result.turn);
+                return;
+            }
+            logSocketEvent('rearrange-properties failed', { socketId: socket.id, error: result.error });
+            callback(result);
+        }
+        catch (error) {
+            handleUnexpectedGameError(socket, callback, error);
+        }
+    });
+    socket.on('respond-to-action', (payload, callback) => {
+        try {
+            logSocketEvent('respond-to-action', { socketId: socket.id, playerId: payload.playerId, roomId: payload.roomId });
+            const result = processRespondToAction(payload);
+            if (result.ok) {
+                callback(result);
+                broadcastGameState(io, result.gameState);
+                broadcastTurn(io, result.turn);
+                broadcastStack(io, result.gameState);
+                if (result.gameState.responseWindow.isOpen) {
+                    scheduleResponseResolution(io, result.gameState.roomId, result.gameState.responseWindow.deadlineAt);
+                }
+                else {
+                    clearResponseResolutionTimer(result.gameState.roomId);
+                }
+                return;
+            }
+            logSocketEvent('respond-to-action failed', { socketId: socket.id, error: result.error });
+            callback(result);
+        }
+        catch (error) {
+            handleUnexpectedGameError(socket, callback, error);
+        }
+    });
+    socket.on('resolve-interaction', (payload, callback) => {
+        try {
+            logSocketEvent('resolve-interaction', { socketId: socket.id, ...payload });
+            const result = processResolveInteraction(payload);
+            if (result.ok) {
+                callback(result);
+                broadcastGameState(io, result.gameState);
+                broadcastTurn(io, result.turn);
+                // Interaction might have finished the game? (unlikely from payment, but possible)
+                if (result.gameState.gameEnded) {
+                    broadcastWinner(io, result.gameState);
+                }
+                return;
+            }
+            logSocketEvent('resolve-interaction failed', { socketId: socket.id, error: result.error });
+            callback(result);
+        }
+        catch (error) {
+            handleUnexpectedGameError(socket, callback, error);
+        }
+    });
     socket.on('disconnect', (reason) => {
         try {
             logSocketEvent('client disconnected', { socketId: socket.id, reason });
+            // DISCONNECT HANDLING WITH GRACE PERIOD:
+            // When a player disconnects (network drop, browser close, etc.):
+            // 1. Mark player as disconnected in room (don't remove yet)
+            // 2. Clear socketId so they can reconnect with new socket.id
+            // 3. Start removal timer (grace period: 1 min for lobby, 10 min for active game)
+            // 4. Broadcast disconnect to other players so they see "waiting" state
+            //
+            // If player reconnects within grace period:
+            // - reconnect-player event arrives with same playerId
+            // - server clears removal timer, updates socketId, marks connected
+            //
+            // If grace period expires:
+            // - removal callback fires, player removed from room
+            // - other players see player completely gone
             const updatedRooms = roomManager.markDisconnected(socket.id, (room) => {
                 if (room) {
                     broadcastRoom(io, room);
                 }
             });
             for (const room of updatedRooms) {
+                // BROADCAST DISCONNECT EVENT:
+                // Notify other players that this player disconnected
+                // Client shows "Waiting for [PlayerName]..." UI indicator
+                const disconnectedPlayer = room.players.find((p) => p.status === 'disconnected');
+                logSocketEvent('emit player-disconnected', { roomId: room.roomId, playerId: disconnectedPlayer?.playerId });
+                io.to(room.roomId).emit('player-disconnected', {
+                    roomId: room.roomId,
+                    playerId: disconnectedPlayer?.playerId ?? '',
+                    playerName: disconnectedPlayer?.name ?? '',
+                });
+                // If disconnected player owns the turn during an active game,
+                // schedule auto-end of their turn after 30 seconds
+                if (disconnectedPlayer && room.status === 'started') {
+                    const gameState = roomManager.getGameState(room.roomId);
+                    if (gameState && gameState.currentTurnPlayerId === disconnectedPlayer.playerId) {
+                        logSocketEvent('scheduling turn disconnect timeout', { roomId: room.roomId, playerId: disconnectedPlayer.playerId });
+                        scheduleTurnDisconnectTimeout(io, room.roomId, disconnectedPlayer.playerId);
+                    }
+                }
                 broadcastRoom(io, room);
             }
         }

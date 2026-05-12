@@ -2,6 +2,8 @@ import type {
   CreateRoomPayload,
   EndTurnPayload,
   JoinRoomPayload,
+  PlayCardPayload,
+  RespondToActionPayload,
   ReconnectPlayerPayload,
   StartGamePayload,
   StartTurnPayload,
@@ -83,6 +85,38 @@ export function validateTurnPayload(payload: StartTurnPayload | EndTurnPayload) 
 
   if (!payload.roomId.trim()) {
     return 'Missing room id.';
+  }
+
+  return null;
+}
+
+export function validatePlayCardPayload(payload: PlayCardPayload) {
+  if (!validatePlayerId(payload.playerId)) {
+    return 'Invalid player session. Refresh and try again.';
+  }
+
+  if (!payload.roomId.trim()) {
+    return 'Missing room id.';
+  }
+
+  if (!payload.cardId.trim()) {
+    return 'Missing card id.';
+  }
+
+  return null;
+}
+
+export function validateRespondToActionPayload(payload: RespondToActionPayload) {
+  if (!validatePlayerId(payload.playerId)) {
+    return 'Invalid player session. Refresh and try again.';
+  }
+
+  if (!payload.roomId.trim()) {
+    return 'Missing room id.';
+  }
+
+  if (!payload.cardId.trim()) {
+    return 'Missing counter card id.';
   }
 
   return null;
