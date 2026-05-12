@@ -3,7 +3,8 @@ import { CardDestination, TurnPhase, type PropertySet } from './types';
 import { useGameStore } from '../store/gameStore';
 import { getPlayerId } from '../session/playerSession';
 import { TopBar } from './components/TopBar';
-import { OpponentPanel } from './components/OpponentPanel';
+import { PlayerSummaryPanel } from './components/PlayerSummaryPanel';
+import { ExpandedBoardModal } from './components/ExpandedBoardModal';
 import { CenterTable } from './components/CenterTable';
 import { HandSection } from './components/HandSection';
 import { PlayerBoardSection } from './components/PlayerBoardSection';
@@ -27,6 +28,7 @@ export function GameTable({ roomId }: { roomId: string }) {
   } = useGameStore();
 
   const [isDiscarding, setIsDiscarding] = useState(false);
+  const [inspectedPlayerId, setInspectedPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
     listenForGameUpdates();
@@ -41,7 +43,6 @@ export function GameTable({ roomId }: { roomId: string }) {
   }, [shouldAutoStartTurn, autoStartRoomId, roomId, turn?.turnPhase, startTurn]);
 
   const currentPlayer = useMemo(() => gameState?.players.find((p) => p.id === playerId) ?? null, [gameState, playerId]);
-  const opponents = useMemo(() => gameState?.players.filter((p) => p.id !== playerId) ?? [], [gameState, playerId]);
   
   const isPlayersTurn = turn?.currentTurnPlayerId === playerId;
   const canStartTurn = isPlayersTurn && turn?.turnPhase === TurnPhase.Draw;
@@ -52,6 +53,10 @@ export function GameTable({ roomId }: { roomId: string }) {
     const p = gameState?.players.find(p => p.id === turn?.currentTurnPlayerId);
     return p?.name || 'Someone';
   }, [gameState, turn]);
+
+  const inspectedPlayer = useMemo(() => 
+    gameState?.players.find(p => p.id === inspectedPlayerId) ?? null, 
+  [gameState, inspectedPlayerId]);
 
   function handleEndTurn() {
     if (!currentPlayer) return;
@@ -128,58 +133,44 @@ export function GameTable({ roomId }: { roomId: string }) {
       />
 
       {/* Main Table Area */}
-      <main className="flex-1 mt-14 overflow-y-auto overflow-x-hidden flex flex-col pb-[200px]">
-        {/* Opponents Row */}
-        <div className="flex justify-center gap-6 p-6">
-          {opponents.map(opp => (
-            <OpponentPanel 
-              key={opp.id} 
-              player={opp} 
-              isTurn={opp.id === turn?.currentTurnPlayerId} 
+      <main className="flex-1 mt-14 overflow-y-auto overflow-x-hidden flex flex-col pb-[300px]">
+        {/* Opponents Summary Grid */}
+        <div className="flex flex-wrap justify-center gap-6 p-8">
+          {gameState.players.filter(p => p.id !== playerId).map(p => (
+            <PlayerSummaryPanel 
+              key={p.id} 
+              player={p} 
+              isMe={false}
+              isTurn={p.id === turn?.currentTurnPlayerId} 
+              onViewBoard={() => setInspectedPlayerId(p.id)}
             />
           ))}
         </div>
 
         {/* Center Area */}
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center p-8">
            <CenterTable 
              deckCount={gameState.deck.length}
              discardPile={gameState.discardPile}
              statusMessage={error || (gameState.gameEnded ? `Game Over! Winner: ${gameState.players.find(p => p.id === gameState.winner)?.name}` : undefined)}
              waitingForResponse={!!otherActiveInteraction && !activeInteractionForMe}
+             canStartTurn={canStartTurn}
+             canEndTurn={canEndTurn}
+             onStartTurn={() => startTurn(roomId)}
+             onEndTurn={handleEndTurn}
            />
         </div>
 
-        {/* Start/End Turn Controls (Floating above hand) */}
-        {isPlayersTurn && !gameState.gameEnded && (
-          <div className="flex justify-center gap-4 mb-4">
-            {canStartTurn && (
-              <button
-                onClick={() => startTurn(roomId)}
-                className="rounded-full bg-brass px-8 py-3 font-black text-ink shadow-2xl transition hover:scale-105 hover:bg-[#e6bc72]"
-              >
-                START YOUR TURN
-              </button>
-            )}
-            {canEndTurn && (
-              <button
-                onClick={handleEndTurn}
-                className="rounded-full border-2 border-brass/40 bg-[#121417]/80 px-8 py-3 font-black text-brass shadow-2xl transition hover:scale-105 hover:bg-brass/10"
-              >
-                END TURN
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Your Board (Bank & Properties) */}
-        <div className="px-6 mb-8">
-           <PlayerBoardSection 
-             player={currentPlayer!} 
-             isCurrentPlayer={true} 
-             onRearrange={handleRearrange}
-             isPlayersTurn={isPlayersTurn}
-           />
+        {/* Your Board (Bank & Properties) - RESTORED AS REQUESTED */}
+        <div className="px-6 mb-8 mt-4">
+           <div className="max-w-6xl mx-auto">
+             <PlayerBoardSection 
+               player={currentPlayer!} 
+               isCurrentPlayer={true} 
+               onRearrange={handleRearrange}
+               isPlayersTurn={isPlayersTurn}
+             />
+           </div>
         </div>
       </main>
 
@@ -197,6 +188,16 @@ export function GameTable({ roomId }: { roomId: string }) {
       />
 
       {/* Overlays */}
+      {inspectedPlayer && (
+        <ExpandedBoardModal
+          player={inspectedPlayer}
+          isCurrentPlayer={inspectedPlayer.id === playerId}
+          isPlayersTurn={isPlayersTurn}
+          onClose={() => setInspectedPlayerId(null)}
+          onRearrange={handleRearrange}
+        />
+      )}
+
       {activeInteractionForMe && (
         <InteractionOverlay 
           interaction={activeInteractionForMe} 
