@@ -178,7 +178,7 @@ export function PlayerBoardSection({
                              onClick={() => setMovingCard({ card, set })}
                              className="absolute -top-2 -right-2 z-50 flex h-7 w-14 items-center justify-center rounded-full bg-brass text-[9px] font-black text-ink opacity-0 shadow-xl transition-all group-hover/card:opacity-100 hover:scale-110 active:scale-95"
                            >
-                             REORG
+                             Move
                            </button>
                          )}
                       </div>

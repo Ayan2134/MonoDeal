@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { CardDestination, TurnPhase, type PropertySet } from './types';
 import { useGameStore } from '../store/gameStore';
 import { getPlayerId } from '../session/playerSession';
+import { useLobbyStore } from '../store/lobbyStore';
+import { env } from '../config/env';
 import { TopBar } from './components/TopBar';
 import { PlayerSummaryPanel } from './components/PlayerSummaryPanel';
 import { ExpandedBoardModal } from './components/ExpandedBoardModal';
@@ -13,6 +15,7 @@ import { DiscardOverlay } from './components/DiscardOverlay';
 
 export function GameTable({ roomId }: { roomId: string }) {
   const playerId = getPlayerId();
+  const { room } = useLobbyStore();
   const {
     gameState,
     turn,
@@ -130,12 +133,14 @@ export function GameTable({ roomId }: { roomId: string }) {
         deckCount={gameState.deck.length}
         discardCount={gameState.discardPile.length}
         gameEnded={gameState.gameEnded}
+        roomCode={room?.roomCode}
+        inviteLink={room ? `${env.appUrl}${room.invitePath}` : undefined}
       />
 
       {/* Main Table Area */}
-      <main className="flex-1 mt-14 overflow-y-auto overflow-x-hidden flex flex-col pb-[300px]">
-        {/* Opponents Summary Grid */}
-        <div className="flex flex-wrap justify-center gap-6 p-8">
+      <main className="flex-1 mt-14 overflow-y-auto overflow-x-hidden flex flex-col justify-between p-4 pb-48 scrollbar-hide">
+        {/* Opponents Summary Row */}
+        <div className="flex flex-wrap justify-center gap-4 py-2">
           {gameState.players.filter(p => p.id !== playerId).map(p => (
             <PlayerSummaryPanel 
               key={p.id} 
@@ -147,8 +152,8 @@ export function GameTable({ roomId }: { roomId: string }) {
           ))}
         </div>
 
-        {/* Center Area */}
-        <div className="flex-1 flex items-center justify-center p-8">
+        {/* Center Area - Deck, Discard, Turn Controls */}
+        <div className="flex-1 flex items-center justify-center">
            <CenterTable 
              deckCount={gameState.deck.length}
              discardPile={gameState.discardPile}
@@ -161,16 +166,14 @@ export function GameTable({ roomId }: { roomId: string }) {
            />
         </div>
 
-        {/* Your Board (Bank & Properties) - RESTORED AS REQUESTED */}
-        <div className="px-6 mb-8 mt-4">
-           <div className="max-w-6xl mx-auto">
-             <PlayerBoardSection 
-               player={currentPlayer!} 
-               isCurrentPlayer={true} 
-               onRearrange={handleRearrange}
-               isPlayersTurn={isPlayersTurn}
-             />
-           </div>
+        {/* Your Board (Bank & Properties) - POSITIONED TO FIT FRAME */}
+        <div className="w-full max-w-6xl mx-auto mb-32">
+           <PlayerBoardSection 
+             player={currentPlayer!} 
+             isCurrentPlayer={true} 
+             onRearrange={handleRearrange}
+             isPlayersTurn={isPlayersTurn}
+           />
         </div>
       </main>
 
