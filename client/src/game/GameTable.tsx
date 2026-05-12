@@ -14,6 +14,7 @@ import { HandSection } from './components/HandSection';
 import { PlayerBoardSection } from './components/PlayerBoardSection';
 import { InteractionOverlay } from './components/InteractionOverlay';
 import { DiscardOverlay } from './components/DiscardOverlay';
+import { WinnerModal } from './components/WinnerModal';
 
 export function GameTable({ roomId }: { roomId: string }) {
   const playerId = getPlayerId();
@@ -51,9 +52,9 @@ export function GameTable({ roomId }: { roomId: string }) {
 
   const currentPlayer = useMemo(() => gameState?.players.find((p) => p.id === playerId) ?? null, [gameState, playerId]);
   
-  const isPlayersTurn = turn?.currentTurnPlayerId === playerId;
-  const canStartTurn = isPlayersTurn && turn?.turnPhase === TurnPhase.Draw;
-  const canEndTurn = isPlayersTurn && turn?.turnPhase !== TurnPhase.Draw;
+  const isPlayersTurn = turn?.currentTurnPlayerId === playerId && !gameState?.gameEnded;
+  const canStartTurn = isPlayersTurn && turn?.turnPhase === TurnPhase.Draw && !gameState?.gameEnded;
+  const canEndTurn = isPlayersTurn && turn?.turnPhase !== TurnPhase.Draw && !gameState?.gameEnded;
   const actionsRemaining = turn?.actionsRemaining ?? 0;
 
   const currentTurnPlayerName = useMemo(() => {
@@ -66,7 +67,7 @@ export function GameTable({ roomId }: { roomId: string }) {
   [gameState, inspectedPlayerId]);
 
   function handleEndTurn() {
-    if (!currentPlayer) return;
+    if (!currentPlayer || gameState?.gameEnded) return;
     if (currentPlayer.hand.length > 7) {
       setIsDiscarding(true);
     } else {
@@ -74,8 +75,12 @@ export function GameTable({ roomId }: { roomId: string }) {
     }
   }
 
+  function handleReturnToLobby() {
+    void useLobbyStore.getState().leaveRoom(roomId);
+  }
+
   function handlePlayCard(cardId: string, destination: CardDestination, propertyColor?: PropertySet['color'], targets?: any, targetSetId?: string) {
-    if (!currentPlayer) return;
+    if (!currentPlayer || gameState?.gameEnded) return;
     void playCard({
       roomId,
       cardId,
@@ -92,7 +97,7 @@ export function GameTable({ roomId }: { roomId: string }) {
   }
 
   function handleRearrange(cardId: string, targetColor: string, targetSetId: string) {
-    if (!currentPlayer) return;
+    if (!currentPlayer || gameState?.gameEnded) return;
     void rearrangeProperties({
       roomId,
       cardId,
@@ -128,6 +133,15 @@ export function GameTable({ roomId }: { roomId: string }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col game-table-bg overflow-hidden text-white">
+      {/* Winner Modal */}
+      {gameState.winner && (
+        <WinnerModal 
+          winnerId={gameState.winner} 
+          players={gameState.players} 
+          onReturnToLobby={handleReturnToLobby}
+        />
+      )}
+
       {/* Top Bar */}
       <TopBar 
         currentTurnPlayerName={currentTurnPlayerName}

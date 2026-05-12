@@ -35,6 +35,8 @@ import { playCard } from './playCard.js';
 import { respondWithJustSayNo } from './stack.js';
 import { resolveInteraction } from './interactions/resolution.js';
 import { rearrangeProperties } from './rearrange.js';
+import { checkWinCondition } from './win.js';
+import { TurnPhase } from './state.js';
 /**
  * Create an action processor for a room
  */
@@ -73,6 +75,17 @@ export class ActionProcessor {
                 gameState,
                 acknowledgement: createSuccessAcknowledgement(gameState.version, sequence),
                 sequence,
+            };
+        }
+        // STEP 1.5: Prevent actions after game end
+        if (gameState.gameEnded) {
+            return {
+                success: false,
+                acknowledgement: createFailureAcknowledgement(gameState.version, 'Game has already ended. No further actions allowed.'),
+                error: {
+                    code: 'GAME_ENDED',
+                    message: 'Game has already ended.',
+                },
             };
         }
         // STEP 2: Validate version
@@ -212,8 +225,35 @@ export class ActionProcessor {
             };
         }
         nextState.version = gameState.version + 1;
+        // STEP 5.5: Centralized Win Condition Check
+        // Ensures winner is announced immediately after ANY action (play, rearrange, resolve)
+        if (!nextState.gameEnded) {
+            const winnerId = checkWinCondition(nextState);
+            if (winnerId) {
+                console.log(`[win] victory detected for ${winnerId} in centralized check`);
+                nextState.winner = winnerId;
+                nextState.gameEnded = true;
+                nextState.actionsRemaining = 0;
+                nextState.turnPhase = TurnPhase.End;
+            }
+        }
         // STEP 6: Create snapshot
         const snapshot = createGameStateSnapshot(nextState, sequence);
+        // STEP 8: DEBUG LOGGING (requested for property validation)
+        console.log('--- GAME STATE DEBUG ---');
+        nextState.players.forEach((p) => {
+            console.log(`Player: ${p.name} (${p.id})`);
+            p.properties.forEach((set) => {
+                const realCount = set.cards.filter((c) => c.type === 'property').length;
+                const wildCount = set.cards.filter((c) => c.type === 'wildcard').length;
+                console.log(`  Set ${set.setId}: color=${set.color}, cards=${set.cards.length}, real=${realCount}, wild=${wildCount}, complete=${set.isComplete}`);
+            });
+            const completeSets = p.properties.filter((s) => s.isComplete).length;
+            console.log(`  COMPLETE SETS: ${completeSets}`);
+        });
+        if (nextState.winner)
+            console.log(`WINNER ANNOUNCED: ${nextState.winner}`);
+        console.log('------------------------');
         // STEP 7: Return result
         return {
             success: true,

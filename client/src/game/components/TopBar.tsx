@@ -74,7 +74,7 @@ export function TopBar({
         }`}>
           <div className={`h-2 w-2 rounded-full ${isMyTurn ? 'bg-brass animate-pulse' : 'bg-white/20'}`} />
           <span className={`text-sm font-bold tracking-wide ${isMyTurn ? 'text-brass' : 'text-white/60'}`}>
-            {isMyTurn ? "YOUR TURN" : `WAITING FOR ${currentTurnPlayerName.toUpperCase()}`}
+            {gameEnded ? "GAME OVER" : (isMyTurn ? "YOUR TURN" : `WAITING FOR ${currentTurnPlayerName.toUpperCase()}`)}
           </span>
         </div>
 

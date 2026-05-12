@@ -2,7 +2,6 @@ import { CardType } from './types.js';
 import { TurnPhase } from './state.js';
 import { consumeAction } from './turn.js';
 import { addPropertyCard } from './property.js';
-import { checkWinCondition } from './win.js';
 import { resolveActionEffect } from './effects/engine.js';
 import { enqueuePendingAction, isResponseEligibleAction } from './stack.js';
 export var CardDestination;
@@ -132,26 +131,6 @@ export function playCard(state, input) {
             }
             updatedState = effectResult.state;
         }
-    }
-    const winner = checkWinCondition(updatedState);
-    if (winner) {
-        const finalState = {
-            ...updatedState,
-            winner,
-            gameEnded: true,
-            actionsRemaining: 0,
-            turnPhase: TurnPhase.End,
-        };
-        return {
-            ok: true,
-            gameState: finalState,
-            turn: {
-                roomId: finalState.roomId,
-                currentTurnPlayerId: finalState.currentTurnPlayerId,
-                actionsRemaining: finalState.actionsRemaining,
-                turnPhase: finalState.turnPhase,
-            },
-        };
     }
     const actionResult = consumeAction(updatedState, input.playerId, 1 + modifiersToConsume.length);
     if (!actionResult.ok) {
