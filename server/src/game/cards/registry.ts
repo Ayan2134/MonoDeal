@@ -36,6 +36,13 @@ export type CardSeed = {
   wildcardRent?: boolean;
   attachable?: boolean;
   modifierTarget?: string;
+  // Rich metadata for inspection
+  metadata?: {
+    description?: string;
+    rulesText?: string;
+    rentProgression?: number[];
+    setSize?: number;
+  };
 };
 
 /**

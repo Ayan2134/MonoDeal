@@ -1,4 +1,4 @@
-import { GamePlayer } from '../types';
+import { Card, GamePlayer } from '../types';
 import { PlayerBoardSection } from './PlayerBoardSection';
 
 type ExpandedBoardModalProps = {
@@ -7,6 +7,7 @@ type ExpandedBoardModalProps = {
   isPlayersTurn?: boolean;
   onClose: () => void;
   onRearrange?: (cardId: string, color: string, setId: string) => void;
+  onInspectCard?: (card: Card) => void;
 };
 
 export function ExpandedBoardModal({
@@ -15,6 +16,7 @@ export function ExpandedBoardModal({
   isPlayersTurn,
   onClose,
   onRearrange,
+  onInspectCard,
 }: ExpandedBoardModalProps) {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
@@ -55,6 +57,7 @@ export function ExpandedBoardModal({
             isCurrentPlayer={isCurrentPlayer} 
             isPlayersTurn={isPlayersTurn}
             onRearrange={onRearrange}
+            onInspectCard={onInspectCard}
           />
         </div>
 

@@ -46,6 +46,11 @@ function generatePropertySeeds(): CardSeed[] {
         color,
         value: config.cardValue,
         seedId: `prop-${color}-${i + 1}`,
+        metadata: {
+          rentProgression: config.rentProgression,
+          setSize: config.setSize,
+          description: `Part of the ${color.replace('-', ' ')} set.`
+        }
       });
     }
   }

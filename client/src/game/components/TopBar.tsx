@@ -12,6 +12,7 @@ type TopBarProps = {
   gameEnded: boolean;
   roomCode?: string;
   inviteLink?: string;
+  onOpenEncyclopedia?: () => void;
 };
 
 export function TopBar({
@@ -24,6 +25,7 @@ export function TopBar({
   gameEnded,
   roomCode,
   inviteLink,
+  onOpenEncyclopedia,
 }: TopBarProps) {
   const { isConnected } = useSocketStatus();
   const [copied, setCopied] = useState(false);
@@ -132,6 +134,14 @@ export function TopBar({
 
       {/* Right: Pile Counts & Connection */}
       <div className="flex items-center gap-6">
+        <button
+          onClick={onOpenEncyclopedia}
+          className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 transition-all hover:bg-white/10 hover:border-brass/40 group/btn"
+        >
+          <svg className="text-white/40 group-hover/btn:text-brass transition-colors" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/></svg>
+          <span className="text-[10px] font-black uppercase tracking-widest text-white/40 group-hover/btn:text-white transition-colors">Rulebook</span>
+        </button>
+
         <div className="flex items-center gap-4">
           <div className="flex flex-col items-end">
             <span className="text-[9px] font-bold uppercase tracking-widest text-white/40">Deck</span>

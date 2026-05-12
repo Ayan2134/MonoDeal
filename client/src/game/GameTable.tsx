@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CardDestination, TurnPhase, type PropertySet } from './types';
+import { Card, CardDestination, TurnPhase, type PropertySet } from './types';
 import { useGameStore } from '../store/gameStore';
 import { getPlayerId } from '../session/playerSession';
+import { CardInspectionModal } from './components/CardInspectionModal';
+import { CardEncyclopedia } from './components/CardEncyclopedia';
 import { useLobbyStore } from '../store/lobbyStore';
 import { env } from '../config/env';
 import { TopBar } from './components/TopBar';
@@ -16,6 +18,8 @@ import { DiscardOverlay } from './components/DiscardOverlay';
 export function GameTable({ roomId }: { roomId: string }) {
   const playerId = getPlayerId();
   const { room } = useLobbyStore();
+  const [inspectedCard, setInspectedCard] = useState<Card | null>(null);
+  const [isEncyclopediaOpen, setIsEncyclopediaOpen] = useState(false);
   const {
     gameState,
     turn,
@@ -135,10 +139,11 @@ export function GameTable({ roomId }: { roomId: string }) {
         gameEnded={gameState.gameEnded}
         roomCode={room?.roomCode}
         inviteLink={room ? `${env.appUrl}${room.invitePath}` : undefined}
+        onOpenEncyclopedia={() => setIsEncyclopediaOpen(true)}
       />
 
       {/* Main Table Area */}
-      <main className="flex-1 mt-14 overflow-y-auto overflow-x-hidden flex flex-col justify-between p-4 pb-48 scrollbar-hide">
+      <main className="flex-1 mt-14 overflow-y-auto overflow-x-hidden flex flex-col gap-20 p-4 pb-64 min-h-0">
         {/* Opponents Summary Row */}
         <div className="flex flex-wrap justify-center gap-4 py-2">
           {gameState.players.filter(p => p.id !== playerId).map(p => (
@@ -146,58 +151,72 @@ export function GameTable({ roomId }: { roomId: string }) {
               key={p.id} 
               player={p} 
               isMe={false}
-              isTurn={p.id === turn?.currentTurnPlayerId} 
+              isTurn={turn?.currentTurnPlayerId === p.id}
               onViewBoard={() => setInspectedPlayerId(p.id)}
             />
           ))}
         </div>
 
-        {/* Center Area - Deck, Discard, Turn Controls */}
-        <div className="flex-1 flex items-center justify-center">
-           <CenterTable 
-             deckCount={gameState.deck.length}
-             discardPile={gameState.discardPile}
-             statusMessage={error || (gameState.gameEnded ? `Game Over! Winner: ${gameState.players.find(p => p.id === gameState.winner)?.name}` : undefined)}
-             waitingForResponse={!!otherActiveInteraction && !activeInteractionForMe}
-             canStartTurn={canStartTurn}
-             canEndTurn={canEndTurn}
-             onStartTurn={() => startTurn(roomId)}
-             onEndTurn={handleEndTurn}
-           />
+        {/* Center Table / Turn Controls */}
+        <div className="flex-1 flex items-center justify-center min-h-[120px]">
+          <CenterTable 
+            deckCount={gameState.deck.length}
+            discardPile={gameState.discardPile}
+            canStartTurn={canStartTurn}
+            canEndTurn={canEndTurn}
+            onStartTurn={() => startTurn(roomId)}
+            onEndTurn={handleEndTurn}
+          />
         </div>
 
-        {/* Your Board (Bank & Properties) - POSITIONED TO FIT FRAME */}
-        <div className="w-full max-w-6xl mx-auto mb-32">
-           <PlayerBoardSection 
-             player={currentPlayer!} 
-             isCurrentPlayer={true} 
-             onRearrange={handleRearrange}
-             isPlayersTurn={isPlayersTurn}
-           />
-        </div>
+        {/* Player Board Section */}
+        {currentPlayer && (
+          <div className="max-w-6xl mx-auto w-full px-4 mb-4">
+            <PlayerBoardSection 
+              player={currentPlayer} 
+              isCurrentPlayer={true}
+              onRearrange={handleRearrange}
+              isPlayersTurn={isPlayersTurn}
+              onInspectCard={setInspectedCard}
+            />
+          </div>
+        )}
       </main>
 
-      {/* Your Hand (Bottom Fan) */}
+      {/* Hand Section */}
       <HandSection
-        cards={currentPlayer?.hand ?? []}
-        isPlayersTurn={isPlayersTurn || false}
-        isLoading={isLoading}
+        cards={currentPlayer?.hand || []}
+        isPlayersTurn={isPlayersTurn}
+        isLoading={false}
         gameEnded={gameState.gameEnded}
-        actionsRemaining={gameState.actionsRemaining}
+        actionsRemaining={actionsRemaining}
         players={gameState.players}
         playerId={playerId}
         onPlayCard={handlePlayCard}
         onRearrange={handleRearrange}
+        onInspectCard={setInspectedCard}
       />
 
-      {/* Overlays */}
+      {/* Modals */}
+      {inspectedCard && (
+        <CardInspectionModal 
+          card={inspectedCard} 
+          onClose={() => setInspectedCard(null)} 
+        />
+      )}
+
+      {isEncyclopediaOpen && (
+        <CardEncyclopedia 
+          onClose={() => setIsEncyclopediaOpen(false)} 
+        />
+      )}
+
       {inspectedPlayer && (
-        <ExpandedBoardModal
-          player={inspectedPlayer}
+        <ExpandedBoardModal 
+          player={inspectedPlayer} 
           isCurrentPlayer={inspectedPlayer.id === playerId}
-          isPlayersTurn={isPlayersTurn}
-          onClose={() => setInspectedPlayerId(null)}
-          onRearrange={handleRearrange}
+          onClose={() => setInspectedPlayerId(null)} 
+          onInspectCard={setInspectedCard}
         />
       )}
 

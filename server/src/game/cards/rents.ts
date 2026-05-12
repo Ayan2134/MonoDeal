@@ -29,6 +29,10 @@ function dualRent(
     affectsAllPlayers: true,
     wildcardRent: false,
     seedId: `${seedIdBase}-${i + 1}`,
+    metadata: {
+      description: `Charge all players rent for your ${colors[0].replace('-', ' ')} or ${colors[1].replace('-', ' ')} properties.`,
+      rulesText: "You must own at least one property of the chosen color to play this card. All opponents must pay you."
+    }
   }));
 }
 
@@ -49,6 +53,10 @@ export const RENT_SEEDS: CardSeed[] = [
     wildcardRent: true,
     affectsAllPlayers: false,
     seedId: 'rent-wild-1',
+    metadata: {
+      description: "Charge any ONE player rent for any property color you own.",
+      rulesText: "You can choose any property color you currently have on the board. Target only ONE player to pay."
+    }
   },
   {
     type: CardType.Action,
@@ -59,6 +67,10 @@ export const RENT_SEEDS: CardSeed[] = [
     wildcardRent: true,
     affectsAllPlayers: false,
     seedId: 'rent-wild-2',
+    metadata: {
+      description: "Charge any ONE player rent for any property color you own.",
+      rulesText: "You can choose any property color you currently have on the board. Target only ONE player to pay."
+    }
   },
   {
     type: CardType.Action,
@@ -69,5 +81,9 @@ export const RENT_SEEDS: CardSeed[] = [
     wildcardRent: true,
     affectsAllPlayers: false,
     seedId: 'rent-wild-3',
+    metadata: {
+      description: "Charge any ONE player rent for any property color you own.",
+      rulesText: "You can choose any property color you currently have on the board. Target only ONE player to pay."
+    }
   },
 ];

@@ -8,6 +8,7 @@ type PlayerBoardSectionProps = {
   isCurrentPlayer: boolean;
   onRearrange?: (cardId: string, color: string, setId: string) => void;
   isPlayersTurn?: boolean;
+  onInspectCard?: (card: Card) => void;
 };
 
 const PROPERTY_SET_SIZES: Record<string, number> = {
@@ -44,7 +45,8 @@ export function PlayerBoardSection({
   player, 
   isCurrentPlayer, 
   onRearrange, 
-  isPlayersTurn 
+  isPlayersTurn,
+  onInspectCard
 }: PlayerBoardSectionProps) {
   const [movingCard, setMovingCard] = useState<{ card: Card, set: PropertySet } | null>(null);
 
@@ -107,9 +109,9 @@ export function PlayerBoardSection({
              <span className="text-[10px] font-black uppercase tracking-widest text-white/20 block mb-4">Banked Items</span>
              <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {player.bank.map(card => (
-                  <div key={card.id} className="scale-75 origin-top-left -mb-12 -mr-6">
-                     <CardView card={card} />
-                  </div>
+                   <div key={card.id} className="scale-75 origin-top-left -mb-12 -mr-6">
+                      <CardView card={card} onInspect={() => onInspectCard?.(card)} />
+                   </div>
                 ))}
              </div>
           </div>
@@ -172,7 +174,7 @@ export function PlayerBoardSection({
                   <div className="flex -space-x-16 overflow-visible pb-2 pl-2 pr-12">
                     {set.cards.map((card, i) => (
                       <div key={card.id} style={{ zIndex: i }} className="group/card relative">
-                         <CardView card={card} />
+                         <CardView card={card} onInspect={() => onInspectCard?.(card)} />
                          {isCurrentPlayer && isPlayersTurn && (
                            <button 
                              onClick={() => setMovingCard({ card, set })}

@@ -20,11 +20,19 @@ export enum PropertyColor {
 
 export type CardId = string;
 
+export type CardMetadata = {
+  description?: string;
+  rulesText?: string;
+  rentProgression?: number[];
+  setSize?: number;
+};
+
 export type CardBase = {
   id: CardId;
   type: CardType;
   name: string;
   value: number;
+  metadata?: CardMetadata;
 };
 
 export type PropertyCard = CardBase & {

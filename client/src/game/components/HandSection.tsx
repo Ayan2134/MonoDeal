@@ -19,6 +19,7 @@ type HandSectionProps = {
   playerId?: string;
   onPlayCard: (cardId: string, destination: CardDestination, propertyColor?: PropertySet['color'], targets?: any, targetSetId?: string) => void;
   onRearrange: (cardId: string, targetColor: string, targetSetId: string) => void;
+  onInspectCard?: (card: Card) => void;
 };
 
 export function HandSection({
@@ -31,6 +32,7 @@ export function HandSection({
   playerId,
   onPlayCard,
   onRearrange,
+  onInspectCard,
 }: HandSectionProps) {
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [wildcardCardId, setWildcardCardId] = useState<string | null>(null);
@@ -212,6 +214,7 @@ export function HandSection({
                 <CardView 
                   card={card} 
                   isSelected={isExpanded} 
+                  onInspect={() => onInspectCard?.(card)}
                   onClick={() => {
                     if (gameEnded) return;
                     setExpandedCardId(isExpanded ? null : card.id);

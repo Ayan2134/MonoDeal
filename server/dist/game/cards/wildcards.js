@@ -20,6 +20,10 @@ export const WILDCARD_SEEDS = [
         colors: [PropertyColor.LightBlue, PropertyColor.Brown],
         value: 1,
         seedId: 'wild-lightblue-brown-1',
+        metadata: {
+            description: "Can be used as either Light Blue or Brown.",
+            rulesText: "You can move and rearrange this card during your turn. It does not count as an action."
+        }
     },
     {
         type: CardType.Wildcard,
@@ -27,6 +31,10 @@ export const WILDCARD_SEEDS = [
         colors: [PropertyColor.Pink, PropertyColor.Orange],
         value: 2,
         seedId: 'wild-pink-orange-1',
+        metadata: {
+            description: "Can be used as either Pink or Orange.",
+            rulesText: "You can move and rearrange this card during your turn. It does not count as an action."
+        }
     },
     {
         type: CardType.Wildcard,
@@ -34,6 +42,10 @@ export const WILDCARD_SEEDS = [
         colors: [PropertyColor.Pink, PropertyColor.Orange],
         value: 2,
         seedId: 'wild-pink-orange-2',
+        metadata: {
+            description: "Can be used as either Pink or Orange.",
+            rulesText: "You can move and rearrange this card during your turn. It does not count as an action."
+        }
     },
     {
         type: CardType.Wildcard,
@@ -41,6 +53,10 @@ export const WILDCARD_SEEDS = [
         colors: [PropertyColor.LightBlue, PropertyColor.Rail],
         value: 4,
         seedId: 'wild-lightblue-rail-1',
+        metadata: {
+            description: "Can be used as either Light Blue or Railroad.",
+            rulesText: "You can move and rearrange this card during your turn. It does not count as an action."
+        }
     },
     {
         type: CardType.Wildcard,
@@ -48,6 +64,10 @@ export const WILDCARD_SEEDS = [
         colors: [PropertyColor.DarkBlue, PropertyColor.Green],
         value: 4,
         seedId: 'wild-darkblue-green-1',
+        metadata: {
+            description: "Can be used as either Dark Blue or Green.",
+            rulesText: "You can move and rearrange this card during your turn. It does not count as an action."
+        }
     },
     {
         type: CardType.Wildcard,
@@ -55,6 +75,10 @@ export const WILDCARD_SEEDS = [
         colors: [PropertyColor.Rail, PropertyColor.Green],
         value: 4,
         seedId: 'wild-rail-green-1',
+        metadata: {
+            description: "Can be used as either Railroad or Green.",
+            rulesText: "You can move and rearrange this card during your turn. It does not count as an action."
+        }
     },
     {
         type: CardType.Wildcard,
@@ -62,6 +86,10 @@ export const WILDCARD_SEEDS = [
         colors: [PropertyColor.Red, PropertyColor.Yellow],
         value: 3,
         seedId: 'wild-red-yellow-1',
+        metadata: {
+            description: "Can be used as either Red or Yellow.",
+            rulesText: "You can move and rearrange this card during your turn. It does not count as an action."
+        }
     },
     {
         type: CardType.Wildcard,
@@ -69,6 +97,10 @@ export const WILDCARD_SEEDS = [
         colors: [PropertyColor.Red, PropertyColor.Yellow],
         value: 3,
         seedId: 'wild-red-yellow-2',
+        metadata: {
+            description: "Can be used as either Red or Yellow.",
+            rulesText: "You can move and rearrange this card during your turn. It does not count as an action."
+        }
     },
     {
         type: CardType.Wildcard,
@@ -76,6 +108,10 @@ export const WILDCARD_SEEDS = [
         colors: [PropertyColor.Utility, PropertyColor.Rail],
         value: 2,
         seedId: 'wild-utility-rail-1',
+        metadata: {
+            description: "Can be used as either Utility or Railroad.",
+            rulesText: "You can move and rearrange this card during your turn. It does not count as an action."
+        }
     },
     {
         type: CardType.Wildcard,
@@ -83,6 +119,10 @@ export const WILDCARD_SEEDS = [
         colors: ALL_COLORS,
         value: 0,
         seedId: 'wild-any-1',
+        metadata: {
+            description: "Multicolor Wildcard. Can be used as ANY property color.",
+            rulesText: "Can be used to complete any property set. Can be rearranged for free during your turn."
+        }
     },
     {
         type: CardType.Wildcard,
@@ -90,5 +130,9 @@ export const WILDCARD_SEEDS = [
         colors: ALL_COLORS,
         value: 0,
         seedId: 'wild-any-2',
+        metadata: {
+            description: "Multicolor Wildcard. Can be used as ANY property color.",
+            rulesText: "Can be used to complete any property set. Can be rearranged for free during your turn."
+        }
     },
 ];

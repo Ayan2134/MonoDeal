@@ -424,6 +424,17 @@ export class RoomManager {
       room.updatedAt = now;
       updatedRooms.push(this.toPublicRoom(room));
       this.scheduleDisconnectedPlayerRemoval(room.roomId, player.playerId, onExpire);
+
+      // SYNC GAME STATE:
+      // If a game is in progress, we must also update the player status in the
+      // GameState so that turn rotation logic (which skips disconnected players)
+      // reflects the current reality.
+      if (room.gameState) {
+        const gamePlayer = room.gameState.players.find(p => p.id === player.playerId);
+        if (gamePlayer) {
+          gamePlayer.status = 'disconnected';
+        }
+      }
     }
 
     return updatedRooms;
@@ -465,6 +476,16 @@ export class RoomManager {
     player.disconnectedAt = undefined;
     room.updatedAt = Date.now();
     this.roomIdByPlayerId.set(player.playerId, room.roomId);
+
+    // SYNC GAME STATE:
+    // Ensure the GameState's player record is updated to 'connected' so that
+    // turn rotation logic knows this player is available to take their turn.
+    if (room.gameState) {
+      const gamePlayer = room.gameState.players.find(p => p.id === player.playerId);
+      if (gamePlayer) {
+        gamePlayer.status = 'connected';
+      }
+    }
   }
 
   private leaveCurrentRoom(playerId: string) {

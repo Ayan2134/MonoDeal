@@ -25,7 +25,7 @@ export function CenterTable({
   const topDiscard = discardPile.length > 0 ? discardPile[discardPile.length - 1] : null;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-10 py-8">
+    <div className="flex flex-col items-center justify-center gap-10 py-16">
       {/* Piles Container */}
       <div className="flex items-center gap-12">
         {/* Deck Pile */}

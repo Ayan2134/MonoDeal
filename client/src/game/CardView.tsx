@@ -25,11 +25,13 @@ export function CardView({
   card, 
   isSelected, 
   onClick,
+  onInspect,
   compact = false 
 }: { 
   card: Card; 
   isSelected?: boolean; 
   onClick?: () => void;
+  onInspect?: () => void;
   compact?: boolean;
 }) {
   const isProperty = card.type === 'property';
@@ -50,7 +52,7 @@ export function CardView({
 
   return (
     <div
-      className={`relative flex h-36 w-24 flex-col rounded-xl border shadow-xl transition-all duration-300 ${
+      className={`group relative flex h-36 w-24 flex-col rounded-xl border shadow-xl transition-all duration-300 ${
         cardStyles[card.type]
       } ${isSelected ? 'ring-4 ring-brass scale-110 z-10' : 'hover:-translate-y-2 hover:shadow-2xl'}`}
       onClick={onClick}
@@ -84,6 +86,20 @@ export function CardView({
 
       {/* Gloss Effect */}
       <div className="absolute inset-0 pointer-events-none rounded-xl bg-gradient-to-tr from-white/5 to-transparent" />
+
+      {/* Inspection Trigger */}
+      {onInspect && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onInspect();
+          }}
+          className="absolute -left-2 -top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-800 border border-white/20 text-white/40 shadow-lg opacity-0 transition-opacity hover:bg-zinc-700 hover:text-white group-hover:opacity-100"
+          title="Inspect Card"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </button>
+      )}
     </div>
   );
 }
