@@ -10,16 +10,17 @@ import { CardType, type Card, type DeckState } from './types.js';
 
 function createCardFromSeed(seed: CardSeed): Card {
   const id = seed.seedId;
+  const metadata = seed.metadata;
 
   if (seed.type === CardType.Property) {
     if (!seed.color) throw new Error(`Property card "${seed.name}" missing color.`);
     if (seed.value === undefined) throw new Error(`Property card "${seed.name}" missing value.`);
-    return { id, type: seed.type, name: seed.name, color: seed.color, value: seed.value };
+    return { id, type: seed.type, name: seed.name, color: seed.color, value: seed.value, metadata };
   }
 
   if (seed.type === CardType.Money) {
     if (typeof seed.value !== 'number') throw new Error(`Money card "${seed.name}" missing value.`);
-    return { id, type: seed.type, name: seed.name, value: seed.value };
+    return { id, type: seed.type, name: seed.name, value: seed.value, metadata };
   }
 
   if (seed.type === CardType.Action) {
@@ -37,13 +38,14 @@ function createCardFromSeed(seed: CardSeed): Card {
       wildcardRent: seed.wildcardRent,
       attachable: seed.attachable,
       modifierTarget: seed.modifierTarget,
+      metadata,
     };
   }
 
   // Wildcard
   if (!seed.colors || seed.colors.length === 0) throw new Error(`Wildcard card "${seed.name}" missing colors.`);
   if (seed.value === undefined) throw new Error(`Wildcard card "${seed.name}" missing value.`);
-  return { id, type: seed.type, name: seed.name, colors: seed.colors, value: seed.value };
+  return { id, type: seed.type, name: seed.name, colors: seed.colors, value: seed.value, metadata };
 }
 
 export function createDeck(): Card[] {

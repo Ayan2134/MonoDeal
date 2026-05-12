@@ -22,9 +22,16 @@ export type CardId = string;
 
 export type CardMetadata = {
   description?: string;
+  gameplayDescription?: string;
   rulesText?: string;
+  officialRulesText?: string;
+  instructions?: string;
   rentProgression?: number[];
   setSize?: number;
+  houseBonusEligible?: boolean;
+  propertyInfo?: string;
+  wildcardInfo?: string;
+  attachmentInfo?: string;
 };
 
 export type CardBase = {

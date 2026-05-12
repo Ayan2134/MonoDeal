@@ -23,7 +23,9 @@ function dualRent(name, colors, seedIdBase, count) {
         seedId: `${seedIdBase}-${i + 1}`,
         metadata: {
             description: `Charge all players rent for your ${colors[0].replace('-', ' ')} or ${colors[1].replace('-', ' ')} properties.`,
-            rulesText: "You must own at least one property of the chosen color to play this card. All opponents must pay you."
+            gameplayDescription: "Forces every opponent to pay you rent simultaneously based on the size of your property set.",
+            rulesText: "You must own at least one property of the chosen color to play this card. All opponents must pay you.",
+            officialRulesText: "Force all players to pay you rent for properties you own in one of these colors. Play into the center to use."
         }
     }));
 }
@@ -45,7 +47,9 @@ export const RENT_SEEDS = [
         seedId: 'rent-wild-1',
         metadata: {
             description: "Charge any ONE player rent for any property color you own.",
-            rulesText: "You can choose any property color you currently have on the board. Target only ONE player to pay."
+            gameplayDescription: "A highly flexible rent card, but only hits a single target.",
+            rulesText: "You can choose any property color you currently have on the board. Target only ONE player to pay.",
+            officialRulesText: "Force one player to pay you rent for properties you own in any of these colors. Play into the center to use."
         }
     },
     {
@@ -59,7 +63,9 @@ export const RENT_SEEDS = [
         seedId: 'rent-wild-2',
         metadata: {
             description: "Charge any ONE player rent for any property color you own.",
-            rulesText: "You can choose any property color you currently have on the board. Target only ONE player to pay."
+            gameplayDescription: "A highly flexible rent card, but only hits a single target.",
+            rulesText: "You can choose any property color you currently have on the board. Target only ONE player to pay.",
+            officialRulesText: "Force one player to pay you rent for properties you own in any of these colors. Play into the center to use."
         }
     },
     {
@@ -73,7 +79,9 @@ export const RENT_SEEDS = [
         seedId: 'rent-wild-3',
         metadata: {
             description: "Charge any ONE player rent for any property color you own.",
-            rulesText: "You can choose any property color you currently have on the board. Target only ONE player to pay."
+            gameplayDescription: "A highly flexible rent card, but only hits a single target.",
+            rulesText: "You can choose any property color you currently have on the board. Target only ONE player to pay.",
+            officialRulesText: "Force one player to pay you rent for properties you own in any of these colors. Play into the center to use."
         }
     },
 ];

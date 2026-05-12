@@ -1,176 +1,70 @@
-import React from 'react';
-import type { Card, PropertyCard, ActionCard, WildcardCard, PropertyColor } from '../types';
-import { CardView } from '../CardView';
+import React, { useState } from 'react';
+import type { Card } from '../types';
+import { MonopolyCardFace } from './inspectors/MonopolyCardFace';
 
 type CardInspectionModalProps = {
   card: Card;
   onClose: () => void;
 };
 
-const colorNameMap: Record<string, string> = {
-  brown: 'Brown',
-  'light-blue': 'Light Blue',
-  pink: 'Pink',
-  orange: 'Orange',
-  red: 'Red',
-  yellow: 'Yellow',
-  green: 'Green',
-  'dark-blue': 'Dark Blue',
-  rail: 'Railroad',
-  utility: 'Utility',
-};
-
-const colorClassMap: Record<string, string> = {
-  brown: 'bg-prop-brown',
-  'light-blue': 'bg-prop-lightblue',
-  pink: 'bg-prop-pink',
-  orange: 'bg-prop-orange',
-  red: 'bg-prop-red',
-  yellow: 'bg-prop-yellow',
-  green: 'bg-prop-green',
-  'dark-blue': 'bg-prop-darkblue',
-  rail: 'bg-prop-rail',
-  utility: 'bg-prop-utility',
-};
-
 export function CardInspectionModal({ card, onClose }: CardInspectionModalProps) {
-  const isProperty = card.type === 'property';
-  const isAction = card.type === 'action';
-  const isWildcard = card.type === 'wildcard';
-  const isMoney = card.type === 'money';
+  const [isFlipped, setIsFlipped] = useState(false);
 
   return (
     <div 
-      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 animate-in fade-in duration-300"
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 md:p-8 animate-in fade-in duration-300 overflow-hidden"
       onClick={onClose}
     >
-      <div 
-        className="relative w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-[#121417] shadow-2xl flex flex-col md:flex-row"
-        onClick={(e) => e.stopPropagation()}
-      >
+      {/* Background Lighting Effect */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-white/5 rounded-full blur-[150px]" />
+      </div>
+
+      <div className="relative w-full max-w-sm md:max-w-md h-[80vh] md:h-[90vh] max-h-[800px] perspective-1000" onClick={(e) => e.stopPropagation()}>
+        
         {/* Close Button */}
         <button 
           onClick={onClose}
-          className="absolute right-4 top-4 z-50 rounded-full bg-white/5 p-2 text-white/40 transition hover:bg-white/10 hover:text-white"
+          className="absolute -right-4 -top-12 md:-right-12 md:-top-0 z-50 rounded-full bg-white/10 p-3 text-white/60 transition-all hover:bg-white/20 hover:text-white hover:scale-110"
+          title="Close Inspection"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
 
-        {/* Card Visual Side */}
-        <div className="flex w-full items-center justify-center bg-white/[0.02] p-12 md:w-1/2">
-           <div className="scale-150 transform transition-transform duration-500 hover:scale-[1.55]">
-             <CardView card={card} />
-           </div>
-        </div>
+        {/* 3D Flip Container */}
+        <div 
+          className={`relative w-full h-full transition-transform duration-700 preserve-3d cursor-pointer ${isFlipped ? 'rotate-y-180' : ''}`}
+          onClick={() => setIsFlipped(!isFlipped)}
+        >
+          {/* Front Face */}
+          <div className="absolute inset-0 backface-hidden z-20 hover:scale-[1.02] transition-transform duration-300 shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-[20px]">
+            <MonopolyCardFace card={card} />
+          </div>
 
-        {/* Details Side */}
-        <div className="flex w-full flex-col p-8 md:w-1/2 md:p-12">
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-               <span className="rounded-full bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white/40 border border-white/5">
-                 {card.type}
-               </span>
-               <span className="text-sm font-black text-emerald-400">
-                 VALUE ${card.value}M
-               </span>
+          {/* Back Face (Monopoly Deal Logo) */}
+          <div className="absolute inset-0 backface-hidden rotate-y-180 bg-[#E53935] rounded-[20px] border-[12px] border-white flex flex-col items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
+            <div className="w-3/4 h-3/4 border-[6px] border-white/20 rounded-xl flex flex-col items-center justify-center p-8 bg-[#C62828] transform -rotate-12">
+               <h1 className="text-white font-black text-5xl md:text-6xl text-center leading-none tracking-tighter drop-shadow-[4px_4px_0_rgba(0,0,0,0.4)]">
+                 MONOPOLY
+               </h1>
+               <h2 className="text-white font-black text-6xl md:text-7xl text-center leading-none tracking-tighter mt-2 drop-shadow-[4px_4px_0_rgba(0,0,0,0.4)]">
+                 DEAL
+               </h2>
+               <div className="mt-8 text-white/60 font-bold uppercase tracking-[0.3em] text-sm text-center">
+                 Card Game
+               </div>
             </div>
-            <h2 className="text-4xl font-black tracking-tight text-white">{card.name}</h2>
+            <div className="absolute bottom-6 text-white/40 text-[10px] font-bold uppercase tracking-widest">
+              Click to flip
+            </div>
           </div>
-
-          <div className="flex-1 space-y-8 overflow-y-auto pr-2 custom-scrollbar">
-            {/* Description Section */}
-            {card.metadata?.description && (
-              <div className="space-y-2">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Description</h4>
-                <p className="text-lg font-medium leading-relaxed text-white/80">{card.metadata.description}</p>
-              </div>
-            )}
-
-            {/* Rules Section */}
-            {card.metadata?.rulesText && (
-              <div className="rounded-2xl border border-brass/20 bg-brass/5 p-6 space-y-2">
-                <div className="flex items-center gap-2 mb-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-brass"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-brass">Gameplay Rules</h4>
-                </div>
-                <p className="text-sm font-medium leading-relaxed text-brass/80 italic">"{card.metadata.rulesText}"</p>
-              </div>
-            )}
-
-            {/* Property Specifics: Rent Table */}
-            {isProperty && (card as PropertyCard).metadata?.rentProgression && (
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Rent Progression</h4>
-                <div className="overflow-hidden rounded-2xl border border-white/5 bg-black/20">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b border-white/5 bg-white/5">
-                        <th className="px-4 py-3 text-[10px] font-black uppercase text-white/40">Cards Owned</th>
-                        <th className="px-4 py-3 text-[10px] font-black uppercase text-white/40">Rent Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {(card as PropertyCard).metadata?.rentProgression?.map((rent, i) => (
-                        <tr key={i} className={i === (card as PropertyCard).metadata!.rentProgression!.length - 1 ? 'bg-brass/10' : ''}>
-                          <td className="px-4 py-3 text-sm font-bold text-white/60">
-                            {i + 1} {i === 0 ? 'Card' : 'Cards'}
-                            {i === (card as PropertyCard).metadata!.rentProgression!.length - 1 && (
-                              <span className="ml-2 rounded bg-brass px-1.5 py-0.5 text-[8px] font-black text-ink">FULL SET</span>
-                            )}
-                          </td>
-                          <td className={`px-4 py-3 text-sm font-black ${i === (card as PropertyCard).metadata!.rentProgression!.length - 1 ? 'text-brass' : 'text-emerald-400'}`}>
-                            ${rent}M
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="text-[10px] font-bold text-white/20 italic">
-                  * Rent is doubled if you play a "Double The Rent" card.
-                </p>
-              </div>
-            )}
-
-            {/* Wildcard Specifics: Colors */}
-            {isWildcard && (
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Compatible Sets</h4>
-                <div className="flex flex-wrap gap-2">
-                  {(card as WildcardCard).colors.map((color) => (
-                    <div key={color} className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
-                      <div className={`h-2 w-2 rounded-full ${colorClassMap[color]}`} />
-                      <span className="text-xs font-bold text-white/80">{colorNameMap[color]}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Action Specifics: Targets */}
-            {isAction && (card as ActionCard).actionId === 'rent' && (
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Target Scope</h4>
-                <div className="flex items-center gap-3 rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white">{(card as ActionCard).affectsAllPlayers ? 'All Opponents' : 'Single Target'}</p>
-                    <p className="text-[10px] font-medium text-white/40">{(card as ActionCard).affectsAllPlayers ? 'Everyone pays you rent simultaneously.' : 'Choose one player to pay you rent.'}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <button 
-            onClick={onClose}
-            className="mt-8 w-full rounded-2xl bg-white/5 py-4 text-sm font-black uppercase tracking-[0.2em] text-white transition hover:bg-white/10"
-          >
-            Back to Table
-          </button>
         </div>
+
+        {/* Floating Hint */}
+        <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 text-white/40 text-xs font-bold uppercase tracking-widest text-center animate-pulse">
+          Click card to flip
+        </div>
+
       </div>
     </div>
   );

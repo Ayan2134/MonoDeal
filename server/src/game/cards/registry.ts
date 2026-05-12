@@ -6,7 +6,7 @@
  * utility that asserts deck correctness at import time.
  */
 
-import { CardType, type PropertyColor } from '../types.js';
+import { CardType, type PropertyColor, type CardMetadata } from '../types.js';
 import { PROPERTY_SEEDS } from './properties.js';
 import { WILDCARD_SEEDS } from './wildcards.js';
 import { RENT_SEEDS } from './rents.js';
@@ -37,12 +37,7 @@ export type CardSeed = {
   attachable?: boolean;
   modifierTarget?: string;
   // Rich metadata for inspection
-  metadata?: {
-    description?: string;
-    rulesText?: string;
-    rentProgression?: number[];
-    setSize?: number;
-  };
+  metadata?: CardMetadata;
 };
 
 /**
