@@ -1,6 +1,7 @@
 import type { EffectHandler } from './types.js';
 import { calculateRent } from '../rentCalculation.js';
 import { PropertyColor } from '../types.js';
+import { appendLogToState } from '../logger.js';
 
 export const rentEffect: EffectHandler = (context) => {
   const { state, actorId, card, targets } = context;
@@ -101,6 +102,28 @@ export const rentEffect: EffectHandler = (context) => {
   }
 
   nextState.activeInteractions = interactions;
+
+  // Log the rent charge
+  const targetDesc = card.affectsAllPlayers ? 'all players' : 'targeted player';
+  appendLogToState(nextState, {
+    type: 'rent',
+    actorPlayerId: actorId,
+    message: `${player.name} charged ${finalRentAmount}M ${selectedColor} Rent from ${targetDesc}`,
+    metadata: {
+      color: selectedColor,
+      amount: finalRentAmount,
+      baseAmount: baseRent,
+      modifiersCount: activeModifiers.length
+    }
+  });
+
+  if (activeModifiers.length > 0) {
+    appendLogToState(nextState, {
+      type: 'card_played',
+      actorPlayerId: actorId,
+      message: `${player.name} used Double The Rent (x${Math.pow(2, activeModifiers.length)})`,
+    });
+  }
 
   return { ok: true, state: nextState };
 };

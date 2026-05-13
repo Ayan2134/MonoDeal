@@ -1,4 +1,5 @@
 import { calculateRent } from '../rentCalculation.js';
+import { appendLogToState } from '../logger.js';
 export const rentEffect = (context) => {
     const { state, actorId, card, targets } = context;
     const player = state.players.find(p => p.id === actorId);
@@ -84,5 +85,25 @@ export const rentEffect = (context) => {
         });
     }
     nextState.activeInteractions = interactions;
+    // Log the rent charge
+    const targetDesc = card.affectsAllPlayers ? 'all players' : 'targeted player';
+    appendLogToState(nextState, {
+        type: 'rent',
+        actorPlayerId: actorId,
+        message: `${player.name} charged ${finalRentAmount}M ${selectedColor} Rent from ${targetDesc}`,
+        metadata: {
+            color: selectedColor,
+            amount: finalRentAmount,
+            baseAmount: baseRent,
+            modifiersCount: activeModifiers.length
+        }
+    });
+    if (activeModifiers.length > 0) {
+        appendLogToState(nextState, {
+            type: 'card_played',
+            actorPlayerId: actorId,
+            message: `${player.name} used Double The Rent (x${Math.pow(2, activeModifiers.length)})`,
+        });
+    }
     return { ok: true, state: nextState };
 };

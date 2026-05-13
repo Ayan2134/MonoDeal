@@ -150,7 +150,7 @@ export function playCard(state: GameState, input: PlayCardInput): PlayCardResult
     players: updatedPlayers,
     discardPile: [
       ...state.discardPile,
-      ...(input.destination === CardDestination.Discard ? [removed.card] : []),
+      ...(input.destination === CardDestination.Discard && !['house', 'hotel'].includes((removed.card as any).actionId) ? [removed.card] : []),
       ...modifiersToConsume
     ],
   };

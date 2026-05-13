@@ -2,6 +2,7 @@ import { CardView } from '../CardView';
 import { useState } from 'react';
 import { PropertyMoveSelector } from './PropertyMoveSelector';
 import { Card, GamePlayer, PropertySet } from '../types';
+import { useGameStore } from '../../store/gameStore';
 
 type PlayerBoardSectionProps = {
   player: GamePlayer;
@@ -48,6 +49,7 @@ export function PlayerBoardSection({
   isPlayersTurn,
   onInspectCard
 }: PlayerBoardSectionProps) {
+  const { highlightState } = useGameStore();
   const [movingCard, setMovingCard] = useState<{ card: Card, set: PropertySet } | null>(null);
 
   // Calculate bank breakdown
@@ -143,7 +145,7 @@ export function PlayerBoardSection({
               return (
                 <div key={set.setId} className={`relative flex flex-col rounded-2xl border p-4 shadow-2xl min-w-[200px] transition-all hover:scale-[1.02] ${
                   set.isComplete ? 'border-brass/40 bg-brass/10 shadow-brass/5' : 'border-white/10 bg-white/5 shadow-black/40'
-                }`}>
+                } ${highlightState.setId === set.setId ? 'ring-2 ring-brass shadow-[0_0_20px_rgba(216,166,87,0.4)]' : ''}`}>
                   {/* Set Header */}
                   <div className="mb-4 flex items-center justify-between gap-4">
                      <div className="flex flex-col">

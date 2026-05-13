@@ -7,6 +7,7 @@ export function DiscardOverlay({
   requiredCount,
   onConfirm,
   onCancel,
+  onInspectCard,
 }: {
   cards: Card[];
   requiredCount: number;

@@ -1,3 +1,4 @@
+import { appendLogToState } from './logger.js';
 import { moveCardBetweenSets } from './property.js';
 import { buildTurnUpdate } from './turn.js';
 export function rearrangeProperties(state, input) {
@@ -18,6 +19,17 @@ export function rearrangeProperties(state, input) {
         ...state,
         players: state.players.map((p, idx) => idx === playerIndex ? result.player : p)
     };
+    const card = player.properties.flatMap(s => s.cards).find(c => c.id === input.cardId);
+    appendLogToState(nextState, {
+        type: 'card_played',
+        actorPlayerId: input.playerId,
+        message: `${player.name} moved ${card?.name || 'a property'} to ${input.targetColor} set`,
+        metadata: {
+            cardId: input.cardId,
+            targetColor: input.targetColor,
+            targetSetId: input.targetSetId
+        }
+    });
     return {
         ok: true,
         gameState: nextState,

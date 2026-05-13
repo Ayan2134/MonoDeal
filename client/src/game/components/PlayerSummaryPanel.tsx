@@ -1,4 +1,5 @@
 import { GamePlayer } from '../types';
+import { useGameStore } from '../../store/gameStore';
 
 type PlayerSummaryPanelProps = {
   player: GamePlayer;
@@ -8,6 +9,9 @@ type PlayerSummaryPanelProps = {
 };
 
 export function PlayerSummaryPanel({ player, isTurn, isMe, onViewBoard }: PlayerSummaryPanelProps) {
+  const { highlightState } = useGameStore();
+  const isHighlighted = highlightState.playerIds.includes(player.id);
+
   // Calculate bank total
   const bankTotal = player.bank.reduce((sum, card) => sum + (card.value || 0), 0);
 
@@ -18,7 +22,7 @@ export function PlayerSummaryPanel({ player, isTurn, isMe, onViewBoard }: Player
       isTurn 
         ? 'border-brass bg-brass/10 shadow-[0_0_30px_rgba(216,166,87,0.15)] active-turn-glow' 
         : 'border-white/10 bg-[#121417]/60 hover:bg-[#181c20]'
-    }`}>
+    } ${isHighlighted ? 'ring-2 ring-brass bg-brass/5 shadow-[0_0_20px_rgba(216,166,87,0.3)] animate-pulse' : ''}`}>
       {/* Player Header */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">

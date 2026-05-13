@@ -32,6 +32,7 @@ import type {
 } from './types.js';
 import { DISCONNECT_GRACE_MS } from './constants.js';
 import { saveRoomSnapshot, loadAllActiveRooms } from './persistence.js';
+import { appendGameLog } from '../game/logger.js';
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -233,6 +234,13 @@ export class RoomManager {
 
     void saveRoomSnapshot(room);
 
+    const firstPlayer = room.players.find(p => p.playerId === room.gameState?.currentTurnPlayerId);
+    this.appendLog(room.roomId, {
+      type: 'turn_start',
+      actorPlayerId: room.gameState?.currentTurnPlayerId || undefined,
+      message: `${firstPlayer?.name || 'Someone'} started the game`,
+    });
+
     console.info(`[RoomLifecycle] Game started in room ${room.roomCode}`);
     return { ok: true, room: this.toPublicRoom(room) };
   }
@@ -268,6 +276,13 @@ export class RoomManager {
       room.updatedAt = now;
       room.lastActivityAt = now;
       room.roomVersion += 1;
+      
+      this.appendLog(room.roomId, {
+        type: 'turn_start',
+        actorPlayerId: payload.playerId,
+        message: `${player.name} started turn`,
+      });
+
       void saveRoomSnapshot(room);
     }
 
@@ -305,6 +320,13 @@ export class RoomManager {
       room.updatedAt = now;
       room.lastActivityAt = now;
       room.roomVersion += 1;
+
+      this.appendLog(room.roomId, {
+        type: 'turn_end',
+        actorPlayerId: payload.playerId,
+        message: `${player.name} ended turn`,
+      });
+
       void saveRoomSnapshot(room);
     }
 
@@ -345,6 +367,21 @@ export class RoomManager {
 
     if (result.ok) {
       const now = Date.now();
+      
+      const gamePlayer = room.gameState.players.find(p => p.id === payload.playerId);
+      const card = room.gameState.players.find(p => p.id === payload.playerId)?.hand.find(c => c.id === payload.cardId);
+
+      this.appendLog(room.roomId, {
+        type: 'card_played',
+        actorPlayerId: payload.playerId,
+        message: `${player.name} played ${card?.name || 'a card'} as ${payload.destination}`,
+        metadata: {
+          cardId: payload.cardId,
+          cardName: card?.name,
+          destination: payload.destination
+        }
+      });
+
       room.gameState = result.gameState;
       room.updatedAt = now;
       room.lastActivityAt = now;
@@ -456,11 +493,37 @@ export class RoomManager {
 
     if (room) {
       const now = Date.now();
-      room.gameState = gameState;
       room.updatedAt = now;
       room.lastActivityAt = now;
       room.roomVersion += 1;
+      
+      // Log any new completions
+      this.logNewCompletions(room, room.gameState, gameState);
+
+      room.gameState = gameState;
       void saveRoomSnapshot(room);
+    }
+  }
+
+  private logNewCompletions(room: Room, oldState: GameState | undefined, newState: GameState) {
+    if (!oldState) return;
+
+    for (const player of newState.players) {
+      const oldPlayer = oldState.players.find(p => p.id === player.id);
+      if (!oldPlayer) continue;
+
+      const newCompletions = player.properties.filter(set => set.isComplete);
+      for (const set of newCompletions) {
+        const oldSet = oldPlayer.properties.find(s => s.setId === set.setId);
+        if (!oldSet || !oldSet.isComplete) {
+          this.appendLog(room.roomId, {
+            type: 'set_completed',
+            actorPlayerId: player.id,
+            message: `${player.name} completed ${set.color} set!`,
+            metadata: { color: set.color }
+          });
+        }
+      }
     }
   }
 
@@ -793,6 +856,13 @@ export class RoomManager {
       lastActivityAt: room.lastActivityAt,
       roomVersion: room.roomVersion,
     };
+  }
+
+  appendLog(roomId: string, log: any): void {
+    const room = this.roomsById.get(roomId);
+    if (room) {
+      appendGameLog(room, log);
+    }
   }
 }
 

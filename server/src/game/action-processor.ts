@@ -296,6 +296,16 @@ export class ActionProcessor {
         nextState.gameEnded = true;
         nextState.actionsRemaining = 0;
         nextState.turnPhase = TurnPhase.End;
+
+        // Log winner
+        const winnerPlayer = nextState.players.find((p: any) => p.id === winnerId);
+        nextState.gameLogs.push({
+          id: `log_${Date.now()}_win`,
+          timestamp: Date.now(),
+          type: 'winner',
+          actorPlayerId: winnerId,
+          message: `${winnerPlayer?.name || 'Someone'} won the game!`,
+        });
       }
     }
 

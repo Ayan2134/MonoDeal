@@ -26,6 +26,29 @@ export type GamePlayer = {
   status: 'connected' | 'disconnected';
 };
 
+export type GameLogType =
+  | 'turn_start'
+  | 'turn_end'
+  | 'card_played'
+  | 'payment'
+  | 'rent'
+  | 'property_stolen'
+  | 'just_say_no'
+  | 'draw'
+  | 'discard'
+  | 'set_completed'
+  | 'winner';
+
+export type GameLogEntry = {
+  id: string;
+  timestamp: number;
+  type: GameLogType;
+  actorPlayerId?: string;
+  targetPlayerId?: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+};
+
 export type GameState = {
   roomId: string;
   // VERSIONING:
@@ -51,4 +74,5 @@ export type GameState = {
   winner: string | null;
   gameStarted: boolean;
   gameEnded: boolean;
+  gameLogs: GameLogEntry[];
 };

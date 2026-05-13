@@ -19,6 +19,7 @@ export function PropertyCardSelector({
   maxSelection = 1,
   onConfirm,
   onCancel,
+  onInspectCard,
 }: PropertyCardSelectorProps) {
   const [selectedCards, setSelectedCards] = useState<{ playerId: string; cardId: string }[]>([]);
 

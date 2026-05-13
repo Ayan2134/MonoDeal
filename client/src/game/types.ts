@@ -188,6 +188,29 @@ export type PendingInteraction = {
   }>;
 };
 
+export type GameLogType =
+  | 'turn_start'
+  | 'turn_end'
+  | 'card_played'
+  | 'payment'
+  | 'rent'
+  | 'property_stolen'
+  | 'just_say_no'
+  | 'draw'
+  | 'discard'
+  | 'set_completed'
+  | 'winner';
+
+export type GameLogEntry = {
+  id: string;
+  timestamp: number;
+  type: GameLogType;
+  actorPlayerId?: string;
+  targetPlayerId?: string;
+  message: string;
+  metadata?: Record<string, any>;
+};
+
 export type GameState = {
   roomId: string;
   players: GamePlayer[];
@@ -204,6 +227,7 @@ export type GameState = {
   // Incremented after each successful action
   // Used to detect stale client requests
   version: number;
+  gameLogs: GameLogEntry[];
 };
 
 export enum CardDestination {

@@ -52,5 +52,6 @@ export function initializeGameState(room: Room, rng: () => number = Math.random)
     winner: null,
     gameStarted: true,
     gameEnded: false,
+    gameLogs: [],
   };
 }

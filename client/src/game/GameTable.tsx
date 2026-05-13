@@ -16,6 +16,7 @@ import { InteractionOverlay } from './components/InteractionOverlay';
 import { DiscardOverlay } from './components/DiscardOverlay';
 import { WinnerModal } from './components/WinnerModal';
 import { PausedRecoveryOverlay } from './components/PausedRecoveryOverlay';
+import { GameLogSidebar } from './components/GameLogSidebar';
 
 export function GameTable({ roomId }: { roomId: string }) {
   const playerId = getPlayerId();
@@ -160,6 +161,12 @@ export function GameTable({ roomId }: { roomId: string }) {
         roomCode={room?.roomCode}
         inviteLink={room ? `${env.appUrl}${room.invitePath}` : undefined}
         onOpenEncyclopedia={() => setIsEncyclopediaOpen(true)}
+      />
+
+      {/* Game Log Sidebar */}
+      <GameLogSidebar 
+        logs={gameState.gameLogs || []} 
+        onInspectCard={setInspectedCard}
       />
 
       {/* Main Table Area */}

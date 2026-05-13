@@ -2,6 +2,7 @@ import type { GameState } from '../state.js';
 import type { PendingInteraction, InteractionResolutionPayload, PaymentResolution, PropertySelectionResolution } from './types.js';
 import { validatePayment, applyPayment } from './payment.js';
 import { recomputePropertySets, createNewSet } from '../property.js';
+import { appendLogToState } from '../logger.js';
 
 export function resolveInteraction(
   state: GameState,
@@ -74,6 +75,13 @@ export function resolveInteraction(
       i.interactionId === interaction.interactionId ? updatedInteraction : i
     );
 
+    const responder = nextState.players.find(p => p.id === playerId);
+    appendLogToState(nextState, {
+      type: 'just_say_no',
+      actorPlayerId: playerId,
+      message: `${responder?.name || 'Someone'} played Just Say No against ${interaction.interactionType.replace('-', ' ')}`,
+    });
+
     return { ok: true, state: nextState };
   }
 
@@ -106,7 +114,13 @@ export function resolveInteraction(
         return { ok: true, state: nextState };
       } else {
         // The entire original action is cancelled.
-        nextState.activeInteractions = nextState.activeInteractions.filter(i => i.interactionId !== interaction.interactionId);
+        const responder = nextState.players.find(p => p.id === playerId);
+        appendLogToState(nextState, {
+          type: 'just_say_no',
+          actorPlayerId: playerId,
+          message: `${responder?.name || 'Someone'} accepted the counter. Action cancelled.`,
+        });
+
         return { ok: true, state: nextState };
       }
     } else {
@@ -125,6 +139,13 @@ export function resolveInteraction(
         i.interactionId === interaction.interactionId ? updatedInteraction : i
       );
       
+      const responder = nextState.players.find(p => p.id === playerId);
+      appendLogToState(nextState, {
+        type: 'just_say_no',
+        actorPlayerId: playerId,
+        message: `${responder?.name || 'Someone'} accepted the counter. Just Say No cancelled.`,
+      });
+
       return { ok: true, state: nextState };
     }
   }
@@ -151,19 +172,37 @@ export function resolveInteraction(
     // Apply the payment
     nextState = applyPayment(nextState, playerId, interaction.initiatorPlayerId, validation.cards);
 
-    // Remove the player from targetPlayerIds
-    const updatedInteraction = {
-      ...interaction,
-      targetPlayerIds: interaction.targetPlayerIds.filter(id => id !== playerId)
-    };
+    const actor = nextState.players.find(p => p.id === playerId);
+    const target = nextState.players.find(p => p.id === interaction.initiatorPlayerId);
+    const cardsList = validation.cards.map(c => `• ${c.name}`).join('\n');
+    const actualValue = validation.cards.reduce((sum, c) => sum + (c.value || 0), 0);
+    
+    appendLogToState(nextState, {
+      type: 'payment',
+      actorPlayerId: playerId,
+      targetPlayerId: interaction.initiatorPlayerId,
+      message: `${actor?.name || 'Someone'} paid ${target?.name || 'Someone'}:\n${cardsList}\n(Total Value: ${actualValue}M)`,
+      metadata: {
+        cards: validation.cards.map(c => ({ id: c.id, name: c.name })),
+        requestedAmount: interaction.amountDue,
+        actualAmount: actualValue
+      }
+    });
 
-    if (updatedInteraction.targetPlayerIds.length === 0) {
-      // Interaction is fully resolved, remove it
-      nextState.activeInteractions = nextState.activeInteractions.filter(i => i.interactionId !== interaction.interactionId);
+    // Update the interaction list properly
+    const updatedTargetIds = interaction.targetPlayerIds.filter(id => id !== playerId);
+    
+    if (updatedTargetIds.length === 0) {
+      // Remove interaction if fully resolved
+      nextState.activeInteractions = nextState.activeInteractions.filter(
+        i => i.interactionId !== interaction.interactionId
+      );
     } else {
-      // Replace with updated interaction
-      nextState.activeInteractions = nextState.activeInteractions.map(i => 
-        i.interactionId === interaction.interactionId ? updatedInteraction : i
+      // Update interaction with remaining targets
+      nextState.activeInteractions = nextState.activeInteractions.map(i =>
+        i.interactionId === interaction.interactionId 
+          ? { ...i, targetPlayerIds: updatedTargetIds } 
+          : i
       );
     }
 
@@ -194,6 +233,20 @@ export function resolveInteraction(
 
     // Remove interaction
     nextState.activeInteractions = nextState.activeInteractions.filter(i => i.interactionId !== interaction.interactionId);
+
+    const actor = nextState.players.find(p => p.id === interaction.initiatorPlayerId);
+    const target = nextState.players.find(p => p.id === expectedResponderId);
+    appendLogToState(nextState, {
+      type: 'property_stolen',
+      actorPlayerId: interaction.initiatorPlayerId,
+      targetPlayerId: expectedResponderId,
+      message: `${actor?.name || 'Someone'} stole a complete ${stolenSet?.color} set from ${target?.name || 'Someone'} using Deal Breaker`,
+      metadata: {
+        stolenSetId: setId,
+        color: stolenSet?.color
+      }
+    });
+
     return { ok: true, state: nextState };
   }
   
@@ -253,6 +306,18 @@ export function resolveInteraction(
     });
 
     nextState.activeInteractions = nextState.activeInteractions.filter(i => i.interactionId !== interaction.interactionId);
+
+    appendLogToState(nextState, {
+      type: 'property_stolen',
+      actorPlayerId: interaction.initiatorPlayerId,
+      targetPlayerId: expectedResponderId,
+      message: `${initiator?.name || 'Someone'} stole ${stolenCard?.name || 'a property'} from ${targetPlayer?.name || 'Someone'} using Sly Deal`,
+      metadata: {
+        stolenCardId: cardId,
+        cardName: stolenCard?.name
+      }
+    });
+
     return { ok: true, state: nextState };
   }
 
@@ -331,6 +396,18 @@ export function resolveInteraction(
     });
 
     nextState.activeInteractions = nextState.activeInteractions.filter(i => i.interactionId !== interaction.interactionId);
+
+    appendLogToState(nextState, {
+      type: 'property_stolen',
+      actorPlayerId: interaction.initiatorPlayerId,
+      targetPlayerId: expectedResponderId,
+      message: `${initiator?.name || 'Someone'} swapped ${initiatorCard?.name || 'a property'} with ${targetCard?.name || 'a property'} from ${targetPlayer?.name || 'Someone'} using Forced Deal`,
+      metadata: {
+        initiatorCardId,
+        targetCardId
+      }
+    });
+
     return { ok: true, state: nextState };
   }
 

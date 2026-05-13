@@ -185,7 +185,22 @@ export function processResolveInteraction(payload) {
     const processor = getProcessor(payload.roomId);
     const result = processor.processAction(action, gameState);
     if (result.success && result.gameState) {
+        const interaction = gameState.activeInteractions.find(i => i.interactionId === payload.interactionId);
         roomManager.updateGameState(payload.roomId, result.gameState);
+        if (payload.resolution.action === 'payment' && interaction) {
+            const actor = result.gameState.players.find(p => p.id === payload.playerId);
+            const target = result.gameState.players.find(p => p.id === interaction.initiatorPlayerId);
+            roomManager.appendLog(payload.roomId, {
+                type: 'payment',
+                actorPlayerId: payload.playerId,
+                targetPlayerId: interaction.initiatorPlayerId,
+                message: `${actor?.name || 'Someone'} paid ${interaction.amountDue || 0}M to ${target?.name || 'Someone'}`,
+                metadata: {
+                    amount: interaction.amountDue,
+                    interactionId: payload.interactionId
+                }
+            });
+        }
         return {
             ok: true,
             gameState: result.gameState,

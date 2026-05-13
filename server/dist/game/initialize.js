@@ -45,5 +45,6 @@ export function initializeGameState(room, rng = Math.random) {
         winner: null,
         gameStarted: true,
         gameEnded: false,
+        gameLogs: [],
     };
 }

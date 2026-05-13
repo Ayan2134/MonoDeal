@@ -46,39 +46,41 @@ export function PropertyCardFace({ card }: { card: PropertyCard }) {
   const setSize = card.metadata?.setSize || 0;
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#F5F5DC] text-black border-[12px] border-white rounded-[20px] overflow-hidden shadow-[inset_0_0_10px_rgba(0,0,0,0.1)] relative">
+    <div className="w-full h-full flex flex-col bg-[#0F1115] text-white border-[8px] border-zinc-800 rounded-[24px] overflow-hidden shadow-2xl relative">
       
       {/* Top Value Circle */}
-      <div className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full border-2 border-black bg-white flex items-center justify-center font-black text-xl shadow-md">
+      <div className="absolute top-4 left-4 z-10 w-12 h-12 rounded-full border-2 border-brass bg-zinc-900 flex items-center justify-center font-black text-2xl text-brass shadow-[0_0_15px_rgba(216,166,87,0.3)]">
         {card.value}M
       </div>
 
       {/* Color Header */}
-      <div className={`w-full pt-14 pb-4 px-4 flex flex-col items-center justify-center border-b-2 border-black ${colorClass} text-white`}>
-        <h2 className="text-2xl md:text-3xl font-black uppercase tracking-wider text-center drop-shadow-md leading-tight">
+      <div className={`w-full pt-16 pb-6 px-6 flex flex-col items-center justify-center border-b border-white/10 ${colorClass} text-white shadow-lg`}>
+        <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-center drop-shadow-lg leading-tight">
           {card.name}
         </h2>
       </div>
 
       {/* Middle Rent Section */}
-      <div className="flex-1 flex flex-col items-center justify-center px-8 py-6 space-y-4">
-        <div className="text-center mb-4">
-          <span className="uppercase text-xl font-black tracking-[0.2em] text-black block">Rent</span>
+      <div className="flex-1 flex flex-col items-center justify-center px-10 py-8 space-y-6">
+        <div className="text-center w-full flex items-center gap-4">
+          <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-brass/40" />
+          <span className="uppercase text-lg font-black tracking-[0.4em] text-brass">Rent Value</span>
+          <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-brass/40" />
         </div>
         
-        <div className="w-full space-y-3">
+        <div className="w-full space-y-4">
           {rentProgression.map((rent, idx) => (
-            <div key={idx} className="flex items-center justify-between font-bold text-lg">
-              <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-sm border border-black/20 ${colorClass}`} />
-                <span className="text-sm">
-                  {idx + 1} {idx === 0 ? 'property' : 'properties'} =
+            <div key={idx} className="flex items-center justify-between font-bold text-xl p-2 rounded-lg hover:bg-white/5 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className={`w-5 h-5 rounded border border-white/20 ${colorClass}`} />
+                <span className="text-sm uppercase tracking-widest text-white/60">
+                  {idx + 1} {idx === 0 ? 'property' : 'properties'}
                 </span>
               </div>
-              <div className="flex items-center gap-3">
-                <span>{rent}M</span>
+              <div className="flex items-center gap-4">
+                <span className="text-brass font-black">{rent}M</span>
                 {idx === rentProgression.length - 1 && (
-                  <span className="px-2 py-0.5 border border-black/40 text-[10px] uppercase rounded-sm font-black tracking-wider text-black/60">
+                  <span className="px-2 py-0.5 bg-brass/20 border border-brass/40 text-[10px] uppercase rounded font-black tracking-widest text-brass">
                     Full Set
                   </span>
                 )}
@@ -86,37 +88,37 @@ export function PropertyCardFace({ card }: { card: PropertyCard }) {
             </div>
           ))}
 
-          {/* House and Hotel Bonus Rows for Eligible Properties */}
+          {/* House and Hotel Bonus Rows */}
           {card.metadata?.houseBonusEligible && (
-            <div className="pt-2 mt-2 border-t border-black/20 space-y-2">
-              <div className="flex items-center justify-between font-bold text-lg text-black/70">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-sm border border-black/20 bg-[#8E24AA]" />
-                  <span className="text-sm">House</span>
+            <div className="pt-4 mt-4 border-t border-white/10 space-y-3">
+              <div className="flex items-center justify-between font-bold text-xl text-emerald-400">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded border border-emerald-500/40 bg-emerald-600" />
+                  <span className="text-sm uppercase tracking-widest">With House</span>
                 </div>
-                <span>+3M</span>
+                <span className="font-black">+3M</span>
               </div>
-              <div className="flex items-center justify-between font-bold text-lg text-black/70">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-sm border border-black/20 bg-[#8E24AA]" />
-                  <span className="text-sm">Hotel</span>
+              <div className="flex items-center justify-between font-bold text-xl text-teal-400">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded border border-teal-500/40 bg-teal-600" />
+                  <span className="text-sm uppercase tracking-widest">With Hotel</span>
                 </div>
-                <span>+4M</span>
+                <span className="font-black">+4M</span>
               </div>
             </div>
           )}
-
-          <div className="pt-4 text-center">
-             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-black/40">Full Set</span>
-          </div>
         </div>
       </div>
 
       {/* Bottom Set Info */}
-      <div className={`w-full py-3 ${colorClass} text-white text-center font-bold text-sm tracking-widest uppercase border-t-2 border-black`}>
-        {card.metadata?.propertyInfo || `Needs ${setSize} for full set`}
+      <div className="w-full bg-zinc-900/80 p-6 flex items-center justify-center border-t border-white/10">
+        <p className="text-sm font-black text-white/40 uppercase tracking-[0.3em]">
+          {card.metadata?.propertyInfo || `Needs ${setSize} cards for full set`}
+        </p>
       </div>
 
+      {/* Background Pattern */}
+      <div className="absolute inset-0 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03]" />
     </div>
   );
 }

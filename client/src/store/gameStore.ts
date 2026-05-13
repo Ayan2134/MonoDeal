@@ -32,6 +32,14 @@ type GameStoreState = {
   playCard: (payload: Omit<PlayCardPayload, 'playerId' | 'clientVersion'>) => Promise<GameStateResult>;
   rearrangeProperties: (payload: Omit<RearrangePropertiesPayload, 'playerId' | 'clientVersion'>) => Promise<GameStateResult>;
   resolveInteraction: (payload: { roomId: string, interactionId: string, resolution: any }) => Promise<GameStateResult>;
+  // HIGHLIGHT STATE - For temporary UI emphasis
+  highlightState: {
+    playerIds: string[];
+    cardIds: string[];
+    setId: string | null;
+  };
+  setHighlight: (highlight: { playerIds?: string[], cardIds?: string[], setId?: string | null }, duration?: number) => void;
+  clearHighlight: () => void;
 };
 
 function emitGameEvent<EventPayload>(
@@ -75,6 +83,11 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   error: '',
   isListening: false,
   isLoading: false,
+  highlightState: {
+    playerIds: [],
+    cardIds: [],
+    setId: null,
+  },
 
   listenForGameUpdates: () => {
     if (get().isListening) {
@@ -276,5 +289,29 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
     set({ error: result.error, isLoading: false });
     return result;
+  },
+  setHighlight: (highlight, duration = 3000) => {
+    set({
+      highlightState: {
+        playerIds: highlight.playerIds || [],
+        cardIds: highlight.cardIds || [],
+        setId: highlight.setId || null,
+      },
+    });
+
+    if (duration > 0) {
+      setTimeout(() => {
+        get().clearHighlight();
+      }, duration);
+    }
+  },
+  clearHighlight: () => {
+    set({
+      highlightState: {
+        playerIds: [],
+        cardIds: [],
+        setId: null,
+      },
+    });
   },
 }));

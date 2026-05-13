@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { EffectHandler } from './types.js';
+import { appendLogToState } from '../logger.js';
 
 export const birthdayCollectionEffect: EffectHandler = (context) => {
   const { state, actorId } = context;
@@ -22,11 +23,20 @@ export const birthdayCollectionEffect: EffectHandler = (context) => {
     canBeCountered: true 
   };
 
+  const nextState = {
+    ...state,
+    activeInteractions: [...state.activeInteractions, newInteraction]
+  };
+
+  const player = state.players.find(p => p.id === actorId);
+  appendLogToState(nextState, {
+    type: 'payment',
+    actorPlayerId: actorId,
+    message: `${player?.name || 'Someone'} charged 2M from everyone using It's My Birthday`,
+  });
+
   return { 
     ok: true, 
-    state: {
-      ...state,
-      activeInteractions: [...state.activeInteractions, newInteraction]
-    } 
+    state: nextState
   };
 };

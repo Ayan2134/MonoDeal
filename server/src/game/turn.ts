@@ -1,5 +1,6 @@
 import { drawMultipleCards } from './deck.js';
 import { TurnPhase, type GameState } from './state.js';
+import { appendLogToState } from './logger.js';
 
 const DRAW_CARDS_PER_TURN = 2;
 const MAX_ACTIONS_PER_TURN = 3;
@@ -100,6 +101,13 @@ export function startTurn(state: GameState, playerId: string): GameStateResult {
     turnPhase: TurnPhase.Action,
   };
 
+  const player = state.players.find(p => p.id === playerId);
+  appendLogToState(nextState, {
+    type: 'draw',
+    actorPlayerId: playerId,
+    message: `${player?.name || 'Someone'} drew ${DRAW_CARDS_PER_TURN} cards`,
+  });
+
   return { ok: true, gameState: nextState, turn: buildTurnUpdate(nextState) };
 }
 
@@ -157,6 +165,13 @@ export function endTurn(state: GameState, playerId: string, discardCardIds?: str
     });
 
     state.discardPile.push(...discardedCards);
+
+    appendLogToState(state, {
+      type: 'discard',
+      actorPlayerId: playerId,
+      message: `${player.name} discarded ${discardedCards.length} cards to meet hand limit`,
+      metadata: { count: discardedCards.length }
+    });
   } else if (discardCardIds && discardCardIds.length > 0) {
     return { ok: false, error: 'You cannot discard cards unless you exceed the hand limit.' };
   }

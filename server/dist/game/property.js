@@ -79,6 +79,21 @@ export function recomputePropertySets(player, discardPile = []) {
     return {
         ...player,
         properties: player.properties
+            .map(set => {
+            // Enforce wildcard color consistency: wildcards must act as the color of the set they are in
+            if (set.color === 'wild')
+                return set;
+            const updatedCards = set.cards.map(card => {
+                if (card.type === CardType.Wildcard) {
+                    const wild = card;
+                    if (wild.assignedColor !== set.color) {
+                        return { ...wild, assignedColor: set.color };
+                    }
+                }
+                return card;
+            });
+            return { ...set, cards: updatedCards };
+        })
             .map(set => normalizePropertySetWithBuildings(set, discardPile))
             .filter(set => set.cards.length > 0)
     };
