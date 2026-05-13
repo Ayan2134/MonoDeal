@@ -15,6 +15,7 @@ import { PlayerBoardSection } from './components/PlayerBoardSection';
 import { InteractionOverlay } from './components/InteractionOverlay';
 import { DiscardOverlay } from './components/DiscardOverlay';
 import { WinnerModal } from './components/WinnerModal';
+import { PausedRecoveryOverlay } from './components/PausedRecoveryOverlay';
 
 export function GameTable({ roomId }: { roomId: string }) {
   const playerId = getPlayerId();
@@ -133,6 +134,11 @@ export function GameTable({ roomId }: { roomId: string }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col game-table-bg overflow-hidden text-white">
+      {/* Paused Recovery Overlay */}
+      {room?.status === 'paused' && (
+        <PausedRecoveryOverlay room={room} />
+      )}
+
       {/* Winner Modal */}
       {gameState.winner && (
         <WinnerModal 
@@ -239,6 +245,7 @@ export function GameTable({ roomId }: { roomId: string }) {
           interaction={activeInteractionForMe} 
           playerId={playerId} 
           roomId={roomId} 
+          onInspectCard={setInspectedCard}
         />
       )}
 
@@ -251,6 +258,7 @@ export function GameTable({ roomId }: { roomId: string }) {
             setIsDiscarding(false);
           }}
           onCancel={() => setIsDiscarding(false)}
+          onInspectCard={setInspectedCard}
         />
       )}
     </div>

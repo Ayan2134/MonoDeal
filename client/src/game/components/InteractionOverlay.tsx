@@ -7,10 +7,12 @@ export function InteractionOverlay({
   interaction,
   playerId,
   roomId,
+  onInspectCard,
 }: {
   interaction: PendingInteraction;
   playerId: string;
   roomId: string;
+  onInspectCard: (card: Card) => void;
 }) {
   const { gameState, resolveInteraction, isLoading } = useGameStore();
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
@@ -157,7 +159,12 @@ export function InteractionOverlay({
                   const targetCard = player.properties
                     .flatMap(s => s.cards)
                     .find(c => c.id === interaction.targetPropertyCardId);
-                  return targetCard ? <CardView card={targetCard} /> : <p className="text-white/40 italic">Target card not found</p>;
+                  return targetCard ? (
+                    <CardView 
+                      card={targetCard} 
+                      onInspect={() => onInspectCard(targetCard)}
+                    />
+                  ) : <p className="text-white/40 italic">Target card not found</p>;
                 })()}
               </div>
 
@@ -195,7 +202,12 @@ export function InteractionOverlay({
                     const targetCard = player.properties
                       .flatMap(s => s.cards)
                       .find(c => c.id === interaction.targetPropertyCardId);
-                    return targetCard ? <CardView card={targetCard} /> : <p className="text-white/40 italic">Card not found</p>;
+                    return targetCard ? (
+                      <CardView 
+                        card={targetCard} 
+                        onInspect={() => onInspectCard(targetCard)}
+                      />
+                    ) : <p className="text-white/40 italic">Card not found</p>;
                   })()}
                 </div>
                 <div className="text-2xl text-white/20">⇄</div>
@@ -205,7 +217,12 @@ export function InteractionOverlay({
                     const initiatorCard = initiator?.properties
                       .flatMap(s => s.cards)
                       .find(c => c.id === interaction.initiatorPropertyCardId);
-                    return initiatorCard ? <CardView card={initiatorCard} /> : <p className="text-white/40 italic">Card not found</p>;
+                    return initiatorCard ? (
+                      <CardView 
+                        card={initiatorCard} 
+                        onInspect={() => onInspectCard(initiatorCard)}
+                      />
+                    ) : <p className="text-white/40 italic">Card not found</p>;
                   })()}
                 </div>
               </div>
@@ -238,6 +255,19 @@ export function InteractionOverlay({
               <p className="mb-6 text-white/80">
                 <span className="font-bold text-red-400">{initiator?.name ?? 'Someone'}</span> has played a Deal Breaker to steal your complete <span className="font-bold capitalize text-white">{interaction.targetPropertyColor?.replace('-', ' ')}</span> set!
               </p>
+              
+              <div className="mb-8 flex flex-wrap justify-center gap-3">
+                {(() => {
+                  const targetSet = player.properties.find(s => s.setId === interaction.targetPropertySetId);
+                  return targetSet?.cards.map(card => (
+                    <CardView 
+                      key={card.id} 
+                      card={card} 
+                      onInspect={() => onInspectCard(card)}
+                    />
+                  )) || <p className="text-white/40 italic">Set not found</p>;
+                })()}
+              </div>
 
               <div className="flex justify-end gap-3">
                 {interaction.canBeCountered && justSayNoCards.length > 0 && justSayNoCards.map(card => (
@@ -297,7 +327,10 @@ export function InteractionOverlay({
                             isSelected ? 'ring-2 ring-emerald-500 rounded-lg scale-105' : 'opacity-80'
                           }`}
                         >
-                          <CardView card={card} />
+                          <CardView 
+                            card={card} 
+                            onInspect={() => onInspectCard(card)}
+                          />
                         </div>
                       );
                     })}

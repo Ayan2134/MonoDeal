@@ -599,7 +599,7 @@ export function registerSocketHandlers(io: MonodealServer, socket: MonodealSocke
 
         // If disconnected player owns the turn during an active game,
         // schedule auto-end of their turn after 30 seconds
-        if (disconnectedPlayer && room.status === 'started') {
+        if (disconnectedPlayer && room.status === 'in_progress') {
           const gameState = roomManager.getGameState(room.roomId);
           if (gameState && gameState.currentTurnPlayerId === disconnectedPlayer.playerId) {
             logSocketEvent('scheduling turn disconnect timeout', { roomId: room.roomId, playerId: disconnectedPlayer.playerId });
@@ -608,6 +608,15 @@ export function registerSocketHandlers(io: MonodealServer, socket: MonodealSocke
         }
 
         broadcastRoom(io, room);
+
+        // SYNC GAME STATE ON DISCONNECT:
+        // Ensure all other players see the "disconnected" status on the game board
+        if (room.status === 'in_progress' || room.status === 'paused') {
+          const gameState = roomManager.getGameState(room.roomId);
+          if (gameState) {
+            broadcastGameState(io, gameState);
+          }
+        }
       }
     } catch (error) {
       handleUnexpectedError(socket, undefined, error);

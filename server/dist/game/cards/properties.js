@@ -43,6 +43,7 @@ function generatePropertySeeds() {
                 metadata: {
                     rentProgression: config.rentProgression,
                     setSize: config.setSize,
+                    houseBonusEligible: config.houseBonusEligible,
                     description: `Part of the ${color.replace('-', ' ')} set.`,
                     gameplayDescription: `Collect ${config.setSize} of these properties to complete the ${color.replace('-', ' ')} set.`,
                     officialRulesText: `To win, be the first player to collect 3 complete property sets of different colors.`,

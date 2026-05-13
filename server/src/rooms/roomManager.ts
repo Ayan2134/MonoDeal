@@ -31,6 +31,7 @@ import type {
   StartGamePayload,
 } from './types.js';
 import { DISCONNECT_GRACE_MS } from './constants.js';
+import { saveRoomSnapshot, loadAllActiveRooms } from './persistence.js';
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -44,6 +45,24 @@ export class RoomManager {
   private readonly roomIdByPlayerId = new Map<string, string>();
 
   private readonly cleanupTimers = new Map<string, DisconnectTimer>();
+
+  async hydrateRoomRegistryFromDatabase() {
+    const activeRooms = await loadAllActiveRooms();
+    
+    for (const room of activeRooms) {
+      this.roomsById.set(room.roomId, room);
+      this.roomIdByCode.set(room.roomCode, room.roomId);
+      for (const player of room.players) {
+        this.roomIdByPlayerId.set(player.playerId, room.roomId);
+      }
+      
+      console.info(`[RoomRecovery] Room ${room.roomCode} registry hydrated.`);
+    }
+    
+    if (activeRooms.length > 0) {
+      console.info(`[RoomRecovery] Total hydrated rooms: ${activeRooms.length}`);
+    }
+  }
 
   createRoom(payload: CreateRoomPayload, socketId: string): RoomResult {
     const validationError = validateCreateRoomPayload(payload);
@@ -72,16 +91,22 @@ export class RoomManager {
       roomCode,
       maxPlayers: payload.maxPlayers,
       hostId: payload.playerId,
-      status: 'waiting',
+      status: 'lobby',
       players: [host],
       createdAt: now,
       updatedAt: now,
+      lastActivityAt: now,
+      roomVersion: 1,
+      reconnectMetadata: {},
     };
 
     this.roomsById.set(roomId, room);
     this.roomIdByCode.set(roomCode, roomId);
     this.roomIdByPlayerId.set(payload.playerId, roomId);
 
+    void saveRoomSnapshot(room);
+
+    console.info(`[RoomLifecycle] Room created: ${roomCode} (${roomId}) by ${payload.playerName}`);
     return { ok: true, room: this.toPublicRoom(room) };
   }
 
@@ -108,8 +133,8 @@ export class RoomManager {
       return { ok: true, room: this.toPublicRoom(room) };
     }
 
-    if (room.status !== 'waiting') {
-      return { ok: false, error: 'This game has already started.' };
+    if (room.status !== 'lobby') {
+      return { ok: false, error: 'This game has already started or is in progress.' };
     }
 
     if (room.players.length >= room.maxPlayers) {
@@ -128,8 +153,13 @@ export class RoomManager {
       lastSeen: now,
     });
     room.updatedAt = now;
+    room.lastActivityAt = now;
+    room.roomVersion += 1;
     this.roomIdByPlayerId.set(payload.playerId, room.roomId);
 
+    void saveRoomSnapshot(room);
+
+    console.info(`[RoomLifecycle] Player ${payload.playerName} joined room ${room.roomCode}`);
     return { ok: true, room: this.toPublicRoom(room) };
   }
 
@@ -151,6 +181,10 @@ export class RoomManager {
     // Socket.IO intentionally gives a new socket.id after reconnects, so we
     // bind the new transport connection back to the existing player record.
     this.connectExistingPlayer(room, existingPlayer, socketId);
+    
+    void saveRoomSnapshot(room);
+
+    console.info(`[RoomRecovery] Player ${existingPlayer.name} triggered reconnect recovery for room ${room.roomCode}`);
     return { ok: true, room: this.toPublicRoom(room) };
   }
 
@@ -186,10 +220,20 @@ export class RoomManager {
       return { ok: false, error: 'At least two players are required to start.' };
     }
 
-    room.status = 'started';
+    room.status = 'in_progress';
     room.gameState = initializeGameState(room);
-    room.updatedAt = Date.now();
+    const now = Date.now();
+    room.updatedAt = now;
+    room.lastActivityAt = now;
+    room.roomVersion += 1;
+    room.recoveryMetadata = {
+      lastValidVersion: room.roomVersion,
+      lastCheckpointAt: now,
+    };
 
+    void saveRoomSnapshot(room);
+
+    console.info(`[RoomLifecycle] Game started in room ${room.roomCode}`);
     return { ok: true, room: this.toPublicRoom(room) };
   }
 
@@ -212,11 +256,19 @@ export class RoomManager {
       return { ok: false, error: 'Player is not connected.' };
     }
 
+    if (room.status === 'paused') {
+      return { ok: false, error: 'Game is currently paused. Waiting for players to reconnect.' };
+    }
+
     const result = startTurn(room.gameState, payload.playerId);
 
     if (result.ok) {
+      const now = Date.now();
       room.gameState = result.gameState;
-      room.updatedAt = Date.now();
+      room.updatedAt = now;
+      room.lastActivityAt = now;
+      room.roomVersion += 1;
+      void saveRoomSnapshot(room);
     }
 
     return result;
@@ -241,11 +293,19 @@ export class RoomManager {
       return { ok: false, error: 'Player is not connected.' };
     }
 
+    if (room.status === 'paused') {
+      return { ok: false, error: 'Game is currently paused. Waiting for players to reconnect.' };
+    }
+
     const result = endTurn(room.gameState, payload.playerId);
 
     if (result.ok) {
+      const now = Date.now();
       room.gameState = result.gameState;
-      room.updatedAt = Date.now();
+      room.updatedAt = now;
+      room.lastActivityAt = now;
+      room.roomVersion += 1;
+      void saveRoomSnapshot(room);
     }
 
     return result;
@@ -270,6 +330,10 @@ export class RoomManager {
       return { ok: false, error: 'Player is not connected.' };
     }
 
+    if (room.status === 'paused') {
+      return { ok: false, error: 'Game is currently paused. Waiting for players to reconnect.' };
+    }
+
     const result = playCard(room.gameState, {
       roomId: payload.roomId,
       playerId: payload.playerId,
@@ -280,8 +344,12 @@ export class RoomManager {
     });
 
     if (result.ok) {
+      const now = Date.now();
       room.gameState = result.gameState;
-      room.updatedAt = Date.now();
+      room.updatedAt = now;
+      room.lastActivityAt = now;
+      room.roomVersion += 1;
+      void saveRoomSnapshot(room);
     }
 
     return result;
@@ -306,6 +374,10 @@ export class RoomManager {
       return { ok: false, error: 'Player is not connected.' };
     }
 
+    if (room.status === 'paused') {
+      return { ok: false, error: 'Game is currently paused. Waiting for players to reconnect.' };
+    }
+
     const response = respondWithJustSayNo(room.gameState, payload.playerId, payload.cardId, payload.targetStackEntryId);
 
     if (!response.ok) {
@@ -313,7 +385,11 @@ export class RoomManager {
     }
 
     room.gameState = response.state;
-    room.updatedAt = Date.now();
+    const now = Date.now();
+    room.updatedAt = now;
+    room.lastActivityAt = now;
+    room.roomVersion += 1;
+    void saveRoomSnapshot(room);
 
     return {
       ok: true,
@@ -334,6 +410,10 @@ export class RoomManager {
       return { ok: false, error: 'Game state not found.' };
     }
 
+    if (room.status === 'paused') {
+      return { ok: false, error: 'Game is currently paused. Waiting for players to reconnect.' };
+    }
+
     const resolved = resolvePendingStack(room.gameState);
 
     if (!resolved.ok) {
@@ -341,7 +421,11 @@ export class RoomManager {
     }
 
     room.gameState = resolved.state;
-    room.updatedAt = Date.now();
+    const now = Date.now();
+    room.updatedAt = now;
+    room.lastActivityAt = now;
+    room.roomVersion += 1;
+    void saveRoomSnapshot(room);
 
     return {
       ok: true,
@@ -371,8 +455,12 @@ export class RoomManager {
     const room = this.roomsById.get(roomId);
 
     if (room) {
+      const now = Date.now();
       room.gameState = gameState;
-      room.updatedAt = Date.now();
+      room.updatedAt = now;
+      room.lastActivityAt = now;
+      room.roomVersion += 1;
+      void saveRoomSnapshot(room);
     }
   }
 
@@ -392,7 +480,11 @@ export class RoomManager {
    * This allows client to restore UI without requiring separate request/response cycles.
    */
   getGameStateForReconnect(roomId: string): GameState | null {
-    const gameState = this.roomsById.get(roomId)?.gameState;
+    const room = this.roomsById.get(roomId);
+    const gameState = room?.gameState;
+    if (gameState) {
+      console.info(`[RoomRecovery] Restoring game state for room ${room?.roomCode} (version: ${room?.roomVersion})`);
+    }
     return gameState ? { ...gameState } : null;
   }
 
@@ -422,6 +514,12 @@ export class RoomManager {
       player.lastSeen = now;
       player.disconnectedAt = now;
       room.updatedAt = now;
+      room.lastActivityAt = now;
+      room.roomVersion += 1;
+      
+      void saveRoomSnapshot(room);
+
+      console.info(`[RoomLifecycle] Player ${player.name} disconnected from room ${room.roomCode} (socket: ${socketId})`);
       updatedRooms.push(this.toPublicRoom(room));
       this.scheduleDisconnectedPlayerRemoval(room.roomId, player.playerId, onExpire);
 
@@ -474,17 +572,54 @@ export class RoomManager {
     player.socketId = socketId;
     player.lastSeen = Date.now();
     player.disconnectedAt = undefined;
-    room.updatedAt = Date.now();
+    const now = Date.now();
+    room.updatedAt = now;
+    room.lastActivityAt = now;
+    room.roomVersion += 1;
+
+    // Update reconnect metadata
+    if (!room.reconnectMetadata) room.reconnectMetadata = {};
+    room.reconnectMetadata[player.playerId] = {
+      lastSocketId: socketId,
+      reconnectedAt: now,
+    };
+
     this.roomIdByPlayerId.set(player.playerId, room.roomId);
 
-    // SYNC GAME STATE:
     // Ensure the GameState's player record is updated to 'connected' so that
-    // turn rotation logic knows this player is available to take their turn.
+    // logic checks (like turn ownership) pass.
     if (room.gameState) {
       const gamePlayer = room.gameState.players.find(p => p.id === player.playerId);
       if (gamePlayer) {
         gamePlayer.status = 'connected';
       }
+    }
+
+    // After reconnecting, we check if the room can now be resumed.
+    // Restoration initially pauses rooms for safety.
+    this.checkRoomResumeEligibility(room);
+  }
+
+  private checkRoomResumeEligibility(room: Room) {
+    if (room.status !== 'paused') return;
+
+    const allConnected = room.players.every(p => p.status === 'connected');
+    
+    if (allConnected) {
+      console.info(`[ReconnectRecovery] All players reconnected to room ${room.roomCode}. Resuming game.`);
+      room.status = 'in_progress';
+      room.updatedAt = Date.now();
+      room.roomVersion += 1;
+      
+      // Clear recovery metadata once resumed
+      if (room.recoveryMetadata) {
+        room.recoveryMetadata.awaitingReconnectPlayers = [];
+      }
+
+      void saveRoomSnapshot(room);
+    } else {
+      const waiting = room.players.filter(p => p.status === 'disconnected').map(p => p.name);
+      console.info(`[ReconnectRecovery] Room ${room.roomCode} still waiting for: ${waiting.join(', ')}`);
     }
   }
 
@@ -522,7 +657,79 @@ export class RoomManager {
       }
     }
 
-    room.updatedAt = Date.now();
+    const now = Date.now();
+    room.updatedAt = now;
+    room.lastActivityAt = now;
+    room.roomVersion += 1;
+    void saveRoomSnapshot(room);
+  }
+
+  pauseRoom(roomId: string): RoomResult {
+    const room = this.roomsById.get(roomId);
+    if (!room) return { ok: false, error: 'Room not found.' };
+    
+    if (room.status !== 'in_progress') {
+      return { ok: false, error: 'Only in-progress games can be paused.' };
+    }
+
+    const now = Date.now();
+    room.status = 'paused';
+    room.updatedAt = now;
+    room.lastActivityAt = now;
+    room.roomVersion += 1;
+    void saveRoomSnapshot(room);
+
+    console.info(`[RoomLifecycle] Room ${room.roomCode} paused`);
+    return { ok: true, room: this.toPublicRoom(room) };
+  }
+
+  resumeRoom(roomId: string): RoomResult {
+    const room = this.roomsById.get(roomId);
+    if (!room) return { ok: false, error: 'Room not found.' };
+    
+    if (room.status !== 'paused') {
+      return { ok: false, error: 'Only paused games can be resumed.' };
+    }
+
+    const now = Date.now();
+    room.status = 'in_progress';
+    room.updatedAt = now;
+    room.lastActivityAt = now;
+    room.roomVersion += 1;
+    void saveRoomSnapshot(room);
+
+    console.info(`[RoomLifecycle] Room ${room.roomCode} resumed`);
+    return { ok: true, room: this.toPublicRoom(room) };
+  }
+
+  markRoomFinished(roomId: string): RoomResult {
+    const room = this.roomsById.get(roomId);
+    if (!room) return { ok: false, error: 'Room not found.' };
+
+    const now = Date.now();
+    room.status = 'finished';
+    room.updatedAt = now;
+    room.lastActivityAt = now;
+    room.roomVersion += 1;
+    void saveRoomSnapshot(room);
+
+    console.info(`[RoomLifecycle] Room ${room.roomCode} marked as finished`);
+    return { ok: true, room: this.toPublicRoom(room) };
+  }
+
+  markRoomAbandoned(roomId: string): RoomResult {
+    const room = this.roomsById.get(roomId);
+    if (!room) return { ok: false, error: 'Room not found.' };
+
+    const now = Date.now();
+    room.status = 'abandoned';
+    room.updatedAt = now;
+    room.lastActivityAt = now;
+    room.roomVersion += 1;
+    void saveRoomSnapshot(room);
+
+    console.info(`[RoomLifecycle] Room ${room.roomCode} marked as abandoned`);
+    return { ok: true, room: this.toPublicRoom(room) };
   }
 
   private scheduleDisconnectedPlayerRemoval(
@@ -583,6 +790,8 @@ export class RoomManager {
         isHost,
         status,
       })),
+      lastActivityAt: room.lastActivityAt,
+      roomVersion: room.roomVersion,
     };
   }
 }

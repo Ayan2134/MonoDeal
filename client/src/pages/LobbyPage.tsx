@@ -73,7 +73,7 @@ export function LobbyPage() {
   const inviteOrigin = env.appUrl;
   const inviteUrl = room ? `${inviteOrigin}${room.invitePath}` : '';
 
-  if (room?.status === 'started') {
+  if (room?.status === 'in_progress') {
     return <GameTable roomId={room.roomId} />;
   }
 

@@ -292,6 +292,7 @@ export function HandSection({
           players={players.filter(p => p.id !== playerId)}
           onConfirm={handleSlyDealConfirm}
           onCancel={() => setSlyDealCardId(null)}
+          onInspectCard={onInspectCard}
         />
       )}
 
@@ -304,6 +305,7 @@ export function HandSection({
             setForcedDealCardId(null);
             setForcedDealStep(null);
           }}
+          onInspectCard={onInspectCard}
         />
       )}
 
@@ -316,6 +318,7 @@ export function HandSection({
             setForcedDealStep(1);
             setForcedDealInitiatorCard(null);
           }}
+          onInspectCard={onInspectCard}
         />
       )}
 

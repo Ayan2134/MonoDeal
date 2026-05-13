@@ -15,7 +15,7 @@ export type RoomSummary = {
   invitePath: string;
   maxPlayers: number;
   hostId: string;
-  status: 'waiting' | 'started';
+  status: 'lobby' | 'in_progress' | 'paused' | 'finished' | 'abandoned';
   players: PlayerSummary[];
 };
 

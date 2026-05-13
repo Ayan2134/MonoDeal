@@ -84,7 +84,13 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     // GAME STATE UPDATES
     socket.on('game-updated', (gameState) => {
       // Update version when we receive new state
-      set({ gameState, currentVersion: gameState.version, error: '' });
+      const turn: TurnUpdate = {
+        roomId: gameState.roomId,
+        currentTurnPlayerId: gameState.currentTurnPlayerId,
+        actionsRemaining: gameState.actionsRemaining,
+        turnPhase: gameState.turnPhase,
+      };
+      set({ gameState, turn, currentVersion: gameState.version, error: '' });
     });
 
     socket.on('turn-updated', (turn) => {
@@ -96,7 +102,20 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     // Restores complete game state so UI renders correctly
     socket.on('game-state-sync', (payload) => {
       console.info('[socket] game-state-sync received', { roomId: payload.roomId, turnOwned: payload.turnOwned, version: payload.gameState.version });
-      set({ gameState: payload.gameState, currentVersion: payload.gameState.version, error: '' });
+      
+      const turn: TurnUpdate = {
+        roomId: payload.gameState.roomId,
+        currentTurnPlayerId: payload.gameState.currentTurnPlayerId,
+        actionsRemaining: payload.gameState.actionsRemaining,
+        turnPhase: payload.gameState.turnPhase,
+      };
+
+      set({ 
+        gameState: payload.gameState, 
+        turn,
+        currentVersion: payload.gameState.version, 
+        error: '' 
+      });
 
       // If reconnecting player owns the turn, automatically resume it
       // Set flag so GameTable component can auto-start the turn

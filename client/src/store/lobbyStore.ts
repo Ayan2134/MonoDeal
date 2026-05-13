@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import { clearCurrentRoom, getCurrentRoom, getPlayerId, saveCurrentRoom, savePlayerName } from '../session/playerSession';
+import { getCurrentRoom, getPlayerId, saveCurrentRoom, savePlayerName, clearCurrentRoom } from '../session/playerSession';
 import { socket, type RoomResult, type RoomSummary } from '../socket/socket';
+import { useGameStore } from './gameStore';
+import type { TurnUpdate } from '../game/types';
 
 type CreateRoomInput = {
   playerName: string;
@@ -188,6 +190,30 @@ export const useLobbyStore = create<LobbyState>((set, get) => ({
     if (result.ok) {
       saveCurrentRoom(result.room.roomId);
       set({ room: result.room, isLoading: false });
+
+      // SYNC GAME STATE ON RECONNECT
+      // If the reconnect response includes game state, hydrate the gameStore immediately
+      // This prevents the "Waiting for someone" UI flicker on reload
+      if (result.gameState) {
+        const turn: TurnUpdate = {
+          roomId: result.gameState.roomId,
+          currentTurnPlayerId: result.gameState.currentTurnPlayerId,
+          actionsRemaining: result.gameState.actionsRemaining,
+          turnPhase: result.gameState.turnPhase,
+        };
+
+        useGameStore.setState({ 
+          gameState: result.gameState, 
+          turn,
+          currentVersion: result.gameState.version,
+          error: '' 
+        });
+
+        if (result.turnOwned && result.gameState.currentTurnPlayerId === getPlayerId()) {
+          useGameStore.setState({ shouldAutoStartTurn: true, autoStartRoomId: result.room.roomId });
+        }
+      }
+
       return result;
     }
 

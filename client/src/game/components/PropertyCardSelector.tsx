@@ -9,6 +9,7 @@ type PropertyCardSelectorProps = {
   maxSelection?: number;
   onConfirm: (selections: { playerId: string; cardId: string }[]) => void;
   onCancel: () => void;
+  onInspectCard?: (card: Card) => void;
 };
 
 export function PropertyCardSelector({
@@ -78,6 +79,7 @@ export function PropertyCardSelector({
                             card={card} 
                             isSelected={isSelected}
                             onClick={() => toggleSelection(player.id, card.id)}
+                            onInspect={() => onInspectCard?.(card)}
                           />
                           {isSelected && (
                             <div className="absolute -top-2 -right-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-brass text-ink font-black shadow-lg">

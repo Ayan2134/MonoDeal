@@ -6,7 +6,21 @@ import type { InteractionResolutionPayload } from '../game/interactions/types.js
 
 export type PlayerConnectionStatus = 'connected' | 'disconnected';
 
-export type RoomStatus = 'waiting' | 'started';
+export type RoomStatus = 'lobby' | 'in_progress' | 'paused' | 'finished' | 'abandoned';
+
+export type ReconnectMetadata = {
+  lastSocketId?: string;
+  reconnectedAt?: number;
+};
+
+export type RecoveryMetadata = {
+  lastValidVersion: number;
+  lastCheckpointAt: number;
+  restoredAt?: number;
+  restartRecoveryId?: string;
+  recoveryReason?: string;
+  awaitingReconnectPlayers?: string[];
+};
 
 export type Player = {
   // PERSISTENT IDENTITY - Stored in browser localStorage, survives reconnects
@@ -35,6 +49,10 @@ export type Room = {
   gameState?: GameState;
   createdAt: number;
   updatedAt: number;
+  lastActivityAt: number;
+  roomVersion: number;
+  reconnectMetadata?: Record<string, ReconnectMetadata>;
+  recoveryMetadata?: RecoveryMetadata;
 };
 
 export type PublicPlayer = {
@@ -52,6 +70,8 @@ export type PublicRoom = {
   hostId: string;
   status: RoomStatus;
   players: PublicPlayer[];
+  lastActivityAt: number;
+  roomVersion: number;
 };
 
 export type RoomResult =

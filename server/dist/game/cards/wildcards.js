@@ -21,7 +21,7 @@ export const WILDCARD_SEEDS = [
         value: 1,
         seedId: 'wild-lightblue-brown-1',
         metadata: {
-            description: "Can be used as either Light Blue or Brown.",
+            description: "Use as either property color shown. May be moved between sets during your turn.",
             gameplayDescription: "A versatile property that can pivot between two different sets. Great for completing a set unexpectedly.",
             rulesText: "You can move and rearrange this card during your turn. It does not count as an action.",
             officialRulesText: "This card can be used as part of either a Light Blue or Brown property set. You can swap it around on your turn.",
@@ -35,7 +35,7 @@ export const WILDCARD_SEEDS = [
         value: 2,
         seedId: 'wild-pink-orange-1',
         metadata: {
-            description: "Can be used as either Pink or Orange.",
+            description: "Use as either property color shown. May be moved between sets during your turn.",
             gameplayDescription: "A versatile property that can pivot between two different sets. Great for completing a set unexpectedly.",
             rulesText: "You can move and rearrange this card during your turn. It does not count as an action.",
             officialRulesText: "This card can be used as part of either a Pink or Orange property set. You can swap it around on your turn.",
@@ -49,7 +49,7 @@ export const WILDCARD_SEEDS = [
         value: 2,
         seedId: 'wild-pink-orange-2',
         metadata: {
-            description: "Can be used as either Pink or Orange.",
+            description: "Use as either property color shown. May be moved between sets during your turn.",
             gameplayDescription: "A versatile property that can pivot between two different sets. Great for completing a set unexpectedly.",
             rulesText: "You can move and rearrange this card during your turn. It does not count as an action.",
             officialRulesText: "This card can be used as part of either a Pink or Orange property set. You can swap it around on your turn.",
@@ -63,7 +63,7 @@ export const WILDCARD_SEEDS = [
         value: 4,
         seedId: 'wild-lightblue-rail-1',
         metadata: {
-            description: "Can be used as either Light Blue or Railroad.",
+            description: "Use as either property color shown. May be moved between sets during your turn.",
             gameplayDescription: "A versatile property that can pivot between two different sets. Great for completing a set unexpectedly.",
             rulesText: "You can move and rearrange this card during your turn. It does not count as an action.",
             officialRulesText: "This card can be used as part of either a Light Blue or Railroad property set. You can swap it around on your turn.",
@@ -77,7 +77,7 @@ export const WILDCARD_SEEDS = [
         value: 4,
         seedId: 'wild-darkblue-green-1',
         metadata: {
-            description: "Can be used as either Dark Blue or Green.",
+            description: "Use as either property color shown. May be moved between sets during your turn.",
             gameplayDescription: "A versatile property that can pivot between two different sets. Great for completing a set unexpectedly.",
             rulesText: "You can move and rearrange this card during your turn. It does not count as an action.",
             officialRulesText: "This card can be used as part of either a Dark Blue or Green property set. You can swap it around on your turn.",
@@ -91,7 +91,7 @@ export const WILDCARD_SEEDS = [
         value: 4,
         seedId: 'wild-rail-green-1',
         metadata: {
-            description: "Can be used as either Railroad or Green.",
+            description: "Use as either property color shown. May be moved between sets during your turn.",
             gameplayDescription: "A versatile property that can pivot between two different sets. Great for completing a set unexpectedly.",
             rulesText: "You can move and rearrange this card during your turn. It does not count as an action.",
             officialRulesText: "This card can be used as part of either a Railroad or Green property set. You can swap it around on your turn.",
@@ -105,7 +105,7 @@ export const WILDCARD_SEEDS = [
         value: 3,
         seedId: 'wild-red-yellow-1',
         metadata: {
-            description: "Can be used as either Red or Yellow.",
+            description: "Use as either property color shown. May be moved between sets during your turn.",
             gameplayDescription: "A versatile property that can pivot between two different sets. Great for completing a set unexpectedly.",
             rulesText: "You can move and rearrange this card during your turn. It does not count as an action.",
             officialRulesText: "This card can be used as part of either a Red or Yellow property set. You can swap it around on your turn.",
@@ -119,7 +119,7 @@ export const WILDCARD_SEEDS = [
         value: 3,
         seedId: 'wild-red-yellow-2',
         metadata: {
-            description: "Can be used as either Red or Yellow.",
+            description: "Use as either property color shown. May be moved between sets during your turn.",
             gameplayDescription: "A versatile property that can pivot between two different sets. Great for completing a set unexpectedly.",
             rulesText: "You can move and rearrange this card during your turn. It does not count as an action.",
             officialRulesText: "This card can be used as part of either a Red or Yellow property set. You can swap it around on your turn.",
@@ -133,7 +133,7 @@ export const WILDCARD_SEEDS = [
         value: 2,
         seedId: 'wild-utility-rail-1',
         metadata: {
-            description: "Can be used as either Utility or Railroad.",
+            description: "Use as either property color shown. May be moved between sets during your turn.",
             gameplayDescription: "A versatile property that can pivot between two different sets. Great for completing a set unexpectedly.",
             rulesText: "You can move and rearrange this card during your turn. It does not count as an action.",
             officialRulesText: "This card can be used as part of either a Utility or Railroad property set. You can swap it around on your turn.",
@@ -147,7 +147,7 @@ export const WILDCARD_SEEDS = [
         value: 0,
         seedId: 'wild-any-1',
         metadata: {
-            description: "Multicolor Wildcard. Can be used as ANY property color.",
+            description: "Use as any property color. May be moved between sets during your turn.",
             gameplayDescription: "The ultimate property card. It can fill a gap in any property set you own.",
             rulesText: "Can be used to complete any property set. Can be rearranged for free during your turn.",
             officialRulesText: "This card can be used as part of ANY property set. This card has no monetary value.",
@@ -161,7 +161,7 @@ export const WILDCARD_SEEDS = [
         value: 0,
         seedId: 'wild-any-2',
         metadata: {
-            description: "Multicolor Wildcard. Can be used as ANY property color.",
+            description: "Use as any property color. May be moved between sets during your turn.",
             gameplayDescription: "The ultimate property card. It can fill a gap in any property set you own.",
             rulesText: "Can be used to complete any property set. Can be rearranged for free during your turn.",
             officialRulesText: "This card can be used as part of ANY property set. This card has no monetary value.",

@@ -16,6 +16,10 @@ function repeatMoney(value, count) {
         name: `${value}M`,
         value,
         seedId: `money-${value}m-${i + 1}`,
+        metadata: {
+            description: `Monetary value: ${value}M`,
+            instructions: "Add to your bank to pay for rent or actions.",
+        }
     }));
 }
 export const MONEY_SEEDS = [

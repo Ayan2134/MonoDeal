@@ -12,6 +12,7 @@ export function DiscardOverlay({
   requiredCount: number;
   onConfirm: (cardIds: string[]) => void;
   onCancel: () => void;
+  onInspectCard: (card: Card) => void;
 }) {
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
 
@@ -52,7 +53,10 @@ export function DiscardOverlay({
                     isSelected ? 'ring-2 ring-red-500 rounded-lg scale-105 opacity-50' : ''
                   }`}
                 >
-                  <CardView card={card} />
+                  <CardView 
+                    card={card} 
+                    onInspect={() => onInspectCard(card)}
+                  />
                 </div>
               );
             })}
