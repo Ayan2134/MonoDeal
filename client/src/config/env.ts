@@ -6,7 +6,5 @@ export const env = {
   socketUrl:
     import.meta.env.VITE_SOCKET_URL ??
     `${window.location.protocol}//${window.location.hostname}:4000`,
-  appUrl: import.meta.env.VITE_APP_URL
-    ? normalizeUrl(import.meta.env.VITE_APP_URL)
-    : normalizeUrl(window.location.origin),
+  appUrl: normalizeUrl(window.location.origin),
 };
