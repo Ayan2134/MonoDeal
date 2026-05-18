@@ -358,7 +358,7 @@ export function InteractionOverlay({
                       disabled={isSubmitting || isLoading}
                       className="rounded-lg border border-red-400/50 bg-red-500/10 px-6 py-2 font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
                     >
-                      Just Say No
+                      Play Just Say No
                     </button>
                   </div>
                 )}
