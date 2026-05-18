@@ -95,6 +95,8 @@ export function resolveInteraction(state, interaction, playerId, resolution) {
                     actorPlayerId: playerId,
                     message: `${responder?.name || 'Someone'} accepted the counter. Action cancelled.`,
                 });
+                // Clean up the interaction since the entire action is cancelled
+                nextState.activeInteractions = nextState.activeInteractions.filter(i => i.interactionId !== interaction.interactionId);
                 return { ok: true, state: nextState };
             }
         }

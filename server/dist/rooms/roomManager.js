@@ -110,11 +110,17 @@ export class RoomManager {
     reconnectPlayer(payload, socketId) {
         const validationError = validateReconnectPayload(payload);
         if (validationError) {
+            console.warn(`[RoomRecovery] Reconnect validation failed for player ${payload.playerId}: ${validationError}`);
             return { ok: false, error: validationError };
         }
         const room = this.roomsById.get(payload.roomId);
-        const existingPlayer = room?.players.find((player) => player.playerId === payload.playerId);
-        if (!room || !existingPlayer) {
+        if (!room) {
+            console.warn(`[RoomRecovery] Reconnect failed: Room ${payload.roomId} not found for player ${payload.playerId}`);
+            return { ok: false, error: 'Room not found.' };
+        }
+        const existingPlayer = room.players.find((player) => player.playerId === payload.playerId);
+        if (!existingPlayer) {
+            console.warn(`[RoomRecovery] Reconnect failed: Player ${payload.playerId} not part of room ${room.roomCode} (Status: ${room.status})`);
             return { ok: false, error: 'Player is not part of this room.' };
         }
         // The browser's durable playerId is the authority here, not socket.id.
@@ -122,7 +128,7 @@ export class RoomManager {
         // bind the new transport connection back to the existing player record.
         this.connectExistingPlayer(room, existingPlayer, socketId);
         void saveRoomSnapshot(room);
-        console.info(`[RoomRecovery] Player ${existingPlayer.name} triggered reconnect recovery for room ${room.roomCode}`);
+        console.info(`[RoomRecovery] Rebind Success: ${existingPlayer.name} rejoined ${room.roomCode} (socket: ${socketId}, status: ${room.status})`);
         return { ok: true, room: this.toPublicRoom(room) };
     }
     leaveRoom(payload) {

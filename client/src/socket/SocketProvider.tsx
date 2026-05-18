@@ -9,44 +9,72 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const store = useLobbyStore.getState();
 
-    // Debugging flow: log connection lifecycle events and surface failures to the UI.
+    // ORCHESTRATION:
+    // When the app wakes up or reconnects, we wait for the socket to be stable
+    // before triggering a session recovery.
+    let stabilizationTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    function triggerRecovery() {
+      const currentState = useLobbyStore.getState();
+      const hasRoom = !!localStorage.getItem('monodeal_roomId');
+      
+      if (!hasRoom) return;
+
+      if (currentState.recoveryState === 'idle' || currentState.recoveryState === 'failed' || currentState.recoveryState === 'retrying') {
+        console.info('[socket] orchestration: triggering recovery', { 
+          state: currentState.recoveryState,
+          connected: socket.connected,
+          id: socket.id 
+        });
+        void currentState.recoverPlayerSession();
+      } else {
+        console.info('[socket] orchestration: recovery skipped (already active)', { state: currentState.recoveryState });
+      }
+    }
+
     function handleConnect() {
-      console.info('[socket] connected', { id: socket.id });
+      console.info('[socket] connected event', { id: socket.id });
       setIsConnected(true);
       store.clearError();
-      // Socket.IO reconnects automatically, but a reconnect receives a new
-      // socket.id. We immediately recover the room session using the durable
-      // localStorage playerId so refreshes and network blips do not duplicate
-      // the same player in the lobby.
-      void store.recoverPlayerSession();
+      
+      // STABILIZATION DELAY:
+      // Especially on mobile Safari, we wait for the transport to be "hot"
+      if (stabilizationTimeout) clearTimeout(stabilizationTimeout);
+      stabilizationTimeout = setTimeout(triggerRecovery, 800);
     }
 
     function handleDisconnect(reason?: string) {
-      console.info('[socket] disconnected', { reason });
+      console.info('[socket] disconnected event', { reason });
       setIsConnected(false);
+      if (stabilizationTimeout) clearTimeout(stabilizationTimeout);
     }
 
     function handleReconnectAttempt(attempt: number) {
-      console.info('[socket] reconnect attempt', { attempt });
+      console.info('[socket] transport reconnect attempt', { attempt });
     }
 
     function handleReconnectSuccess(attempt: number) {
-      console.info('[socket] reconnect success', { attempt, id: socket.id });
+      console.info('[socket] transport reconnect success', { attempt, id: socket.id });
     }
 
     function handleConnectError(error: Error) {
       console.error('[socket] connection error', error);
-      store.setError('Socket connection failed. Retrying...');
+      // Don't show permanent error yet, lobbyStore handles retries
     }
 
-    function handleReconnectError(error: Error) {
-      console.error('[socket] reconnect error', error);
-      store.setError('Unable to reconnect to the server.');
-    }
+    // MOBILE / BROWSER WAKE EVENTS
+    function handleAppWake() {
+      const reason = document.visibilityState === 'visible' ? 'visibilitychange' : 'focus/online';
+      console.info(`[socket] app wake detected via ${reason}`, { 
+        connected: socket.connected,
+        state: useLobbyStore.getState().recoveryState
+      });
 
-    function handleReconnectFailed() {
-      console.error('[socket] reconnect failed');
-      store.setError('Reconnection attempts failed. Please refresh the page.');
+      if (!socket.connected) {
+        socket.connect();
+      } else {
+        triggerRecovery();
+      }
     }
 
     socket.connect();
@@ -55,17 +83,24 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     socket.on('connect_error', handleConnectError);
     socket.io.on('reconnect_attempt', handleReconnectAttempt);
     socket.io.on('reconnect', handleReconnectSuccess);
-    socket.io.on('reconnect_error', handleReconnectError);
-    socket.io.on('reconnect_failed', handleReconnectFailed);
+
+    window.addEventListener('visibilitychange', handleAppWake);
+    window.addEventListener('focus', handleAppWake);
+    window.addEventListener('pageshow', handleAppWake);
+    window.addEventListener('online', handleAppWake);
 
     return () => {
+      if (stabilizationTimeout) clearTimeout(stabilizationTimeout);
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
       socket.off('connect_error', handleConnectError);
       socket.io.off('reconnect_attempt', handleReconnectAttempt);
       socket.io.off('reconnect', handleReconnectSuccess);
-      socket.io.off('reconnect_error', handleReconnectError);
-      socket.io.off('reconnect_failed', handleReconnectFailed);
+
+      window.removeEventListener('visibilitychange', handleAppWake);
+      window.removeEventListener('focus', handleAppWake);
+      window.removeEventListener('pageshow', handleAppWake);
+      window.removeEventListener('online', handleAppWake);
     };
   }, []);
 

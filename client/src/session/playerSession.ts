@@ -1,6 +1,7 @@
 const PLAYER_ID_KEY = 'monodeal.playerId';
 const PLAYER_NAME_KEY = 'monodeal.playerName';
 const ROOM_ID_KEY = 'monodeal.roomId';
+const ROOM_CODE_KEY = 'monodeal.roomCode';
 
 function createPlayerId() {
   if (crypto.randomUUID) {
@@ -30,18 +31,21 @@ export function getPlayerName() {
   return localStorage.getItem(PLAYER_NAME_KEY) ?? '';
 }
 
-export function saveCurrentRoom(roomId: string) {
+export function saveCurrentRoom(roomId: string, roomCode: string) {
   localStorage.setItem(ROOM_ID_KEY, roomId);
+  localStorage.setItem(ROOM_CODE_KEY, roomCode);
 }
 
 export function getCurrentRoom() {
-  return localStorage.getItem(ROOM_ID_KEY);
+  const roomId = localStorage.getItem(ROOM_ID_KEY);
+  const roomCode = localStorage.getItem(ROOM_CODE_KEY);
+  
+  if (!roomId || !roomCode) return null;
+  
+  return { roomId, roomCode };
 }
 
-export function clearCurrentRoom(roomId?: string) {
-  const currentRoomId = getCurrentRoom();
-
-  if (!roomId || currentRoomId === roomId) {
-    localStorage.removeItem(ROOM_ID_KEY);
-  }
+export function clearCurrentRoom() {
+  localStorage.removeItem(ROOM_ID_KEY);
+  localStorage.removeItem(ROOM_CODE_KEY);
 }

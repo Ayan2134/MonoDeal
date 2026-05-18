@@ -197,12 +197,23 @@ export function registerSocketHandlers(io, socket) {
             // 6. Client hydrates store and restores UI exactly as it was
             const result = roomManager.reconnectPlayer(payload, socket.id);
             if (!result.ok) {
-                logSocketEvent('reconnect-player failed', { socketId: socket.id, error: result.error });
+                logSocketEvent('reconnect-player REJECTED', {
+                    socketId: socket.id,
+                    playerId: payload.playerId,
+                    roomId: payload.roomId,
+                    reason: result.error
+                });
                 callback(result);
                 emitRoomResult(socket, result);
                 return;
             }
             // SUCCESSFUL RECONNECTION
+            logSocketEvent('reconnect-player SUCCESS', {
+                socketId: socket.id,
+                playerId: payload.playerId,
+                roomId: payload.roomId,
+                roomCode: result.room.roomCode
+            });
             socket.join(result.room.roomId);
             logSocketEvent('room rejoined', { socketId: socket.id, roomId: result.room.roomId, roomCode: result.room.roomCode });
             // If game is in progress, send full game state to reconnecting client

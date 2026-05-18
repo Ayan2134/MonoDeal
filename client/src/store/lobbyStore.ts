@@ -14,18 +14,23 @@ type JoinRoomInput = {
   roomCode?: string;
 };
 
+export type RecoveryState = 'idle' | 'reconnecting' | 'retrying' | 'recovered' | 'failed';
+
 type LobbyState = {
   room: RoomSummary | null;
   error: string;
   isLoading: boolean;
   isListening: boolean;
+  recoveryState: RecoveryState;
+  reconnectAttempts: number;
+  lastRecoveryError: string;
   setInitialRoom: (room: RoomSummary | null) => void;
   clearError: () => void;
   setError: (message: string) => void;
   listenForRoomUpdates: () => void;
   createRoom: (input: CreateRoomInput) => Promise<RoomResult>;
   joinRoom: (input: JoinRoomInput) => Promise<RoomResult>;
-  reconnectPlayer: (roomId: string) => Promise<RoomResult>;
+  reconnectPlayer: (roomId: string, manualRetry?: boolean) => Promise<RoomResult>;
   recoverPlayerSession: () => Promise<RoomResult | null>;
   leaveRoom: (roomId: string) => Promise<void>;
   startGame: (roomId: string) => Promise<RoomResult>;
@@ -73,6 +78,9 @@ export const useLobbyStore = create<LobbyState>((set, get) => ({
   error: '',
   isLoading: false,
   isListening: false,
+  recoveryState: 'idle',
+  reconnectAttempts: 0,
+  lastRecoveryError: '',
 
   setInitialRoom: (room) => {
     set({ room });
@@ -96,7 +104,7 @@ export const useLobbyStore = create<LobbyState>((set, get) => ({
       const currentRoom = get().room;
 
       if (!currentRoom || currentRoom.roomId === nextRoom.roomId) {
-        saveCurrentRoom(nextRoom.roomId);
+        // ONLY persist after successful lifecycle, but we update the in-memory room
         set({ room: nextRoom, error: '' });
       }
     });
@@ -106,24 +114,11 @@ export const useLobbyStore = create<LobbyState>((set, get) => ({
       set({ error: message });
     });
 
-    // PLAYER CONNECTION STATUS IN LOBBY
-    // Broadcast when player reconnects (auto-join room again)
-    socket.on('player-reconnected', (payload) => {
-      logSocketEvent('player-reconnected', { playerId: payload.playerId, playerName: payload.playerName });
-    });
-
-    // Broadcast when player disconnects in lobby
-    socket.on('player-disconnected', (payload) => {
-      logSocketEvent('player-disconnected', { playerId: payload.playerId, playerName: payload.playerName });
-    });
-
     set({ isListening: true });
   },
 
   createRoom: async ({ playerName, maxPlayers }) => {
     set({ isLoading: true, error: '' });
-
-    logSocketEvent('create-room request', { maxPlayers });
 
     const result = await emitWithResult('create-room', {
       playerId: getPlayerId(),
@@ -131,12 +126,10 @@ export const useLobbyStore = create<LobbyState>((set, get) => ({
       maxPlayers,
     }, { logLabel: 'create-room' });
 
-    logSocketEvent('create-room response', { ok: result.ok });
-
     if (result.ok) {
       savePlayerName(playerName);
-      saveCurrentRoom(result.room.roomId);
-      set({ room: result.room, isLoading: false });
+      saveCurrentRoom(result.room.roomId, result.room.roomCode);
+      set({ room: result.room, isLoading: false, recoveryState: 'idle' });
       return result;
     }
 
@@ -147,20 +140,16 @@ export const useLobbyStore = create<LobbyState>((set, get) => ({
   joinRoom: async ({ playerName, roomCode }) => {
     set({ isLoading: true, error: '' });
 
-    logSocketEvent('join-room request', { roomCode });
-
     const result = await emitWithResult('join-room', {
       playerId: getPlayerId(),
       playerName,
       roomCode,
-    }, { logLabel: 'join-room', timeoutError: 'Joining the room is taking longer than expected. Please try again.' });
-
-    logSocketEvent('join-room response', { ok: result.ok, roomCode });
+    }, { logLabel: 'join-room' });
 
     if (result.ok) {
       savePlayerName(playerName);
-      saveCurrentRoom(result.room.roomId);
-      set({ room: result.room, isLoading: false });
+      saveCurrentRoom(result.room.roomId, result.room.roomCode);
+      set({ room: result.room, isLoading: false, recoveryState: 'idle' });
       return result;
     }
 
@@ -168,82 +157,142 @@ export const useLobbyStore = create<LobbyState>((set, get) => ({
     return result;
   },
 
-  reconnectPlayer: async (roomId) => {
-    if (!roomId) {
-      return { ok: false, error: 'Missing room id.' };
+  reconnectPlayer: async (roomId, manualRetry = false) => {
+    // PREVENT DUPLICATE RECOVERY ATTEMPTS (unless it's a manual retry)
+    if (get().recoveryState === 'reconnecting' && !manualRetry) {
+      logSocketEvent('reconnect-player SKIPPED (already in progress)', { roomId });
+      return { ok: false, error: 'Reconnect already in progress' };
     }
 
-    set({ isLoading: true, error: '' });
+    if (manualRetry) {
+      set({ reconnectAttempts: 0, lastRecoveryError: '' });
+    }
 
-    logSocketEvent('reconnect-player request', { roomId });
+    const MAX_ATTEMPTS = 5;
+    let currentAttempt = get().reconnectAttempts;
 
-    // Recovery is explicit because socket.id is transport-scoped. On refresh or
-    // automatic Socket.IO reconnect, the browser sends its localStorage playerId
-    // so the server can attach the new socket to the existing room seat.
-    const result = await emitWithResult('reconnect-player', {
-      playerId: getPlayerId(),
-      roomId,
-    }, { logLabel: 'reconnect-player' });
+    const performAttempt = async (): Promise<RoomResult> => {
+      set({ 
+        isLoading: true, 
+        error: '', 
+        recoveryState: currentAttempt === 0 ? 'reconnecting' : 'retrying',
+        reconnectAttempts: currentAttempt
+      });
 
-    logSocketEvent('reconnect-player response', { ok: result.ok, roomId });
+      logSocketEvent(`reconnect-player ATTEMPT ${currentAttempt + 1}`, { 
+        roomId, 
+        playerId: getPlayerId(),
+        socketId: socket.id,
+        connected: socket.connected
+      });
 
-    if (result.ok) {
-      saveCurrentRoom(result.room.roomId);
-      set({ room: result.room, isLoading: false });
+      // auth: timeout 10s for reconnect specific
+      const result = await emitWithResult('reconnect-player', {
+        playerId: getPlayerId(),
+        roomId,
+      }, { 
+        logLabel: `reconnect-player-att-${currentAttempt}`,
+        timeoutMs: 10_000,
+        timeoutError: 'Recovery request timed out'
+      });
 
-      // SYNC GAME STATE ON RECONNECT
-      // If the reconnect response includes game state, hydrate the gameStore immediately
-      // This prevents the "Waiting for someone" UI flicker on reload
-      if (result.gameState) {
-        const turn: TurnUpdate = {
-          roomId: result.gameState.roomId,
-          currentTurnPlayerId: result.gameState.currentTurnPlayerId,
-          actionsRemaining: result.gameState.actionsRemaining,
-          turnPhase: result.gameState.turnPhase,
-        };
-
-        useGameStore.setState({ 
-          gameState: result.gameState, 
-          turn,
-          currentVersion: result.gameState.version,
-          error: '' 
+      if (result.ok) {
+        logSocketEvent('reconnect-player SUCCESS', { roomId, roomCode: result.room.roomCode });
+        saveCurrentRoom(result.room.roomId, result.room.roomCode);
+        set({ 
+          room: result.room, 
+          isLoading: false, 
+          recoveryState: 'recovered',
+          reconnectAttempts: 0,
+          lastRecoveryError: ''
         });
 
-        if (result.turnOwned && result.gameState.currentTurnPlayerId === getPlayerId()) {
-          useGameStore.setState({ shouldAutoStartTurn: true, autoStartRoomId: result.room.roomId });
+        if (result.gameState) {
+          const turn: TurnUpdate = {
+            roomId: result.gameState.roomId,
+            currentTurnPlayerId: result.gameState.currentTurnPlayerId,
+            actionsRemaining: result.gameState.actionsRemaining,
+            turnPhase: result.gameState.turnPhase,
+          };
+
+          useGameStore.setState({ 
+            gameState: result.gameState, 
+            turn,
+            currentVersion: result.gameState.version,
+            error: '' 
+          });
+
+          if (result.turnOwned && result.gameState.currentTurnPlayerId === getPlayerId()) {
+            useGameStore.setState({ shouldAutoStartTurn: true, autoStartRoomId: result.room.roomId });
+          }
         }
+        return result;
       }
 
-      return result;
-    }
+      // FAILURE HANDLING
+      logSocketEvent('reconnect-player FAILED', { 
+        ok: false, 
+        error: result.error, 
+        attempt: currentAttempt + 1 
+      });
 
-    clearCurrentRoom(roomId);
-    set({ error: result.error, isLoading: false, room: null });
-    return result;
+      const isStale = result.error?.toLowerCase().includes('not part of this room') || 
+                      result.error?.toLowerCase().includes('room not found');
+
+      if (isStale) {
+        logSocketEvent('reconnect-player STALE SESSION detected', { error: result.error });
+        clearCurrentRoom();
+        set({ room: null, error: '', recoveryState: 'failed', isLoading: false });
+        return result;
+      }
+
+      // If we have retries left and it wasn't a stale session error
+      if (currentAttempt < MAX_ATTEMPTS - 1) {
+        currentAttempt++;
+        const delay = Math.min(Math.pow(2, currentAttempt) * 1000, 10000);
+        logSocketEvent(`reconnect-player RETRYING in ${delay}ms`, { attempt: currentAttempt });
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return performAttempt();
+      }
+
+      // FINAL FAILURE
+      set({ 
+        isLoading: false, 
+        recoveryState: 'failed', 
+        lastRecoveryError: result.error || 'Unknown recovery error',
+        error: result.error || 'Failed to recover session after multiple attempts'
+      });
+      return result;
+    };
+
+    return performAttempt();
   },
 
   recoverPlayerSession: async () => {
-    const roomId = getCurrentRoom();
-
-    if (!roomId) {
+    const session = getCurrentRoom();
+    if (!session || !session.roomId) {
       return null;
     }
 
-    return get().reconnectPlayer(roomId);
+    return get().reconnectPlayer(session.roomId);
   },
 
   leaveRoom: async (roomId) => {
     set({ isLoading: true, error: '' });
 
-    logSocketEvent('leave-room request', { roomId });
-
     const result = await emitWithResult('leave-room', { playerId: getPlayerId(), roomId }, { logLabel: 'leave-room' });
 
-    logSocketEvent('leave-room response', { ok: result.ok, roomId });
-
     if (result.ok) {
-      clearCurrentRoom(roomId);
-      set({ room: null, isLoading: false });
+      clearCurrentRoom();
+      set({ room: null, isLoading: false, recoveryState: 'idle' });
+      return;
+    }
+
+    // If leave fails because room is gone, still clear local state
+    if (result.error?.toLowerCase().includes('not found')) {
+      clearCurrentRoom();
+      set({ room: null, isLoading: false, recoveryState: 'idle' });
       return;
     }
 
@@ -253,14 +302,10 @@ export const useLobbyStore = create<LobbyState>((set, get) => ({
   startGame: async (roomId) => {
     set({ isLoading: true, error: '' });
 
-    logSocketEvent('start-game request', { roomId });
-
     const result = await emitWithResult('start-game', {
       playerId: getPlayerId(),
       roomId,
     }, { logLabel: 'start-game' });
-
-    logSocketEvent('start-game response', { ok: result.ok, roomId });
 
     if (result.ok) {
       set({ room: result.room, isLoading: false });

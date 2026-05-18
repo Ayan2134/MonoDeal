@@ -1,6 +1,7 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { SocketProvider } from '../socket/SocketProvider';
 import { useSocketStatus } from '../socket/useSocketStatus';
+import { DebugOverlay } from './DebugOverlay';
 
 function Shell() {
   const { isConnected } = useSocketStatus();
@@ -28,6 +29,7 @@ function Shell() {
       <main className="mx-auto w-full max-w-6xl px-5 py-10">
         <Outlet />
       </main>
+      <DebugOverlay />
     </div>
   );
 }
