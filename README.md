@@ -51,15 +51,12 @@ npm run lint       # Lint the client
 
 ## Environment
 
-Client variables must use the `VITE_` prefix.
-
 ```bash
 # client/.env
-VITE_SOCKET_URL=http://localhost:4000
-VITE_APP_URL=http://192.168.1.4:5173
+SOCKET_URL=http://localhost:4000
 ```
 
-Set `VITE_APP_URL` to the laptop's LAN URL when you want copied invite links to work on other devices on the same Wi-Fi.
+Invite links use the page origin automatically. For phones on the same Wi-Fi, open the laptop LAN URL in the browser (for example `http://192.168.1.4:5173`) and set `SOCKET_URL` to the laptop’s LAN address on port 4000.
 
 ```bash
 # server/.env

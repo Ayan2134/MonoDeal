@@ -11,11 +11,10 @@ Compatibility files are already included: [vercel.json](vercel.json) and [render
 
 ## Environment Variables
 
-Client (Vercel Project Settings or .env.production):
+Client (Vercel Project Settings — no `VITE_` prefix):
 
 ```
-VITE_SOCKET_URL=https://api.your-domain.com
-VITE_APP_URL=https://app.your-domain.com
+SOCKET_URL=https://monodeal-server.onrender.com
 ```
 
 Server (Render Environment):
@@ -30,8 +29,8 @@ PUBLIC_APP_URL=https://app.your-domain.com
 Notes:
 - `CLIENT_ORIGIN` can be a comma-separated list. Use `*` only for temporary debugging.
 - `PUBLIC_APP_URL` is used by the server landing page for the frontend link.
-- `VITE_APP_URL` is used to build invite links on the client.
-- `VITE_SOCKET_URL` should be the Render service URL (https) so Socket.IO upgrades to WSS in production.
+- Invite links use the current site origin. You do not need an app URL env var.
+- `SOCKET_URL` is the Render service URL (`https`) so Socket.IO upgrades to WSS. It is public by design — the browser has to know where to connect. Do not put secrets there.
 
 ## Deployment Scripts
 

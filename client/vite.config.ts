@@ -1,16 +1,28 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
+function resolveSocketUrl(fileEnv: Record<string, string>) {
+  return (
+    process.env.SOCKET_URL ||
+    fileEnv.SOCKET_URL ||
+    fileEnv.VITE_SOCKET_URL ||
+    'http://localhost:4000'
+  );
+}
+
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-  const serverUrl = env.VITE_SOCKET_URL ?? 'http://localhost:4000';
+  const fileEnv = loadEnv(mode, process.cwd(), '');
+  const socketUrl = resolveSocketUrl(fileEnv);
 
   return {
     plugins: [react()],
+    define: {
+      __MONODEAL_SOCKET_URL__: JSON.stringify(socketUrl),
+    },
     server: {
       port: 5173,
       proxy: {
-        '/api': serverUrl,
+        '/api': socketUrl,
       },
     },
   };
