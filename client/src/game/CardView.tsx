@@ -82,10 +82,10 @@ export function CardView({
 
   return (
     <div
-      className={`group relative flex h-36 w-24 flex-col rounded-xl border shadow-xl transition-all duration-300 overflow-hidden ${
+      className={`group relative flex h-36 w-24 flex-col overflow-hidden rounded-xl border shadow-xl transition-all duration-300 ${
         cardClass
-      } ${isSelected ? 'ring-4 ring-brass scale-110 z-10' : 'hover:-translate-y-2 hover:shadow-2xl'} ${
-        isHighlighted ? 'ring-4 ring-brass scale-105 z-20 animate-pulse shadow-[0_0_20px_rgba(216,166,87,0.5)]' : ''
+      } ${isSelected ? 'z-10 scale-110 ring-4 ring-brass' : 'md:hover:-translate-y-2 md:hover:shadow-2xl'} ${
+        isHighlighted ? 'z-20 scale-105 animate-pulse ring-4 ring-brass shadow-[0_0_20px_rgba(216,166,87,0.5)]' : ''
       }`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
@@ -164,7 +164,7 @@ export function CardView({
             e.stopPropagation();
             onInspect();
           }}
-          className="absolute -left-1 -top-1 z-30 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 border border-brass/40 text-brass shadow-xl opacity-0 transition-all duration-200 hover:scale-110 hover:bg-brass hover:text-ink group-hover:opacity-100"
+          className="absolute -left-1 -top-1 z-30 flex h-6 w-6 items-center justify-center rounded-full border border-brass/40 bg-zinc-900 text-brass opacity-100 shadow-xl transition-all duration-200 hover:scale-110 hover:bg-brass hover:text-ink md:opacity-0 md:group-hover:opacity-100"
           title="Inspect Card"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>

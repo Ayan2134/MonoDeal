@@ -157,11 +157,11 @@ export function InteractionOverlay({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl border border-brass/30 bg-[#181c20] p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-brass/30 bg-[#181c20] p-4 shadow-2xl sm:rounded-2xl sm:p-6">
         {isCounterResponder ? (
           <>
-            <h2 className="mb-2 text-2xl font-bold text-red-400">Action Countered!</h2>
+            <h2 className="mb-2 text-xl font-bold text-red-400 sm:text-2xl">Action Countered!</h2>
             <div className="mb-6">
               <p className="mb-2 text-white/80">
                 {isInitiator 
@@ -172,11 +172,11 @@ export function InteractionOverlay({
                 Counter Chain Depth: {counterDepth}
               </p>
             </div>
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3">
               <button
                 onClick={handleAcceptCounter}
                 disabled={isSubmitting || isLoading}
-                className="rounded-lg border border-white/20 px-6 py-2 font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
+                className="rounded-lg border border-white/20 px-4 py-2.5 font-semibold text-white transition hover:bg-white/10 disabled:opacity-50 sm:px-6 sm:py-2"
               >
                 {isInitiator ? 'Accept Cancellation' : 'Accept'}
               </button>
@@ -185,7 +185,7 @@ export function InteractionOverlay({
                   key={card.id}
                   onClick={() => handleJustSayNo(card.id)}
                   disabled={isSubmitting || isLoading}
-                  className="rounded-lg bg-red-500 px-6 py-2 font-semibold text-white transition hover:bg-red-400 disabled:opacity-50"
+                  className="rounded-lg bg-red-500 px-4 py-2.5 font-semibold text-white transition hover:bg-red-400 disabled:opacity-50 sm:px-6 sm:py-2"
                 >
                   Counter with Just Say No
                 </button>
@@ -195,7 +195,7 @@ export function InteractionOverlay({
         ) : (
           interaction.interactionType === 'steal-property' ? (
             <>
-              <h2 className="mb-2 text-2xl font-bold text-red-500">Sly Deal!</h2>
+              <h2 className="mb-2 text-xl font-bold text-red-500 sm:text-2xl">Sly Deal!</h2>
               <p className="mb-6 text-white/80">
                 <span className="font-bold text-red-400">{initiator?.name ?? 'Someone'}</span> is stealing one of your property cards!
               </p>
@@ -215,13 +215,13 @@ export function InteractionOverlay({
                 })()}
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3">
                 {interaction.canBeCountered && justSayNoCards.length > 0 && justSayNoCards.map(card => (
                   <button
                     key={card.id}
                     onClick={() => handleJustSayNo(card.id)}
                     disabled={isSubmitting || isLoading}
-                    className="rounded-lg border border-red-400/50 bg-red-500/10 px-6 py-2 font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+                    className="rounded-lg border border-red-400/50 bg-red-500/10 px-4 py-2.5 font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50 sm:px-6 sm:py-2"
                   >
                     Play Just Say No
                   </button>
@@ -229,7 +229,7 @@ export function InteractionOverlay({
                 <button
                   onClick={handleAccept}
                   disabled={isSubmitting || isLoading}
-                  className="rounded-lg border border-white/20 bg-white/5 px-6 py-2 font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
+                  className="rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 font-semibold text-white transition hover:bg-white/10 disabled:opacity-50 sm:px-6 sm:py-2"
                 >
                   Yield Property
                 </button>
@@ -237,12 +237,12 @@ export function InteractionOverlay({
             </>
           ) : interaction.interactionType === 'forced-swap' ? (
             <>
-              <h2 className="mb-2 text-2xl font-bold text-red-500">Forced Deal!</h2>
+              <h2 className="mb-2 text-xl font-bold text-red-500 sm:text-2xl">Forced Deal!</h2>
               <p className="mb-6 text-white/80">
                 <span className="font-bold text-red-400">{initiator?.name ?? 'Someone'}</span> is swapping one of their properties for yours!
               </p>
               
-              <div className="mb-8 flex items-center justify-center gap-8">
+              <div className="mb-6 flex items-center justify-center gap-4 sm:mb-8 sm:gap-8">
                 <div className="flex flex-col items-center gap-2">
                   <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">You Give</span>
                   {(() => {
@@ -274,13 +274,13 @@ export function InteractionOverlay({
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3">
                 {interaction.canBeCountered && justSayNoCards.length > 0 && justSayNoCards.map(card => (
                   <button
                     key={card.id}
                     onClick={() => handleJustSayNo(card.id)}
                     disabled={isSubmitting || isLoading}
-                    className="rounded-lg border border-red-400/50 bg-red-500/10 px-6 py-2 font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+                    className="rounded-lg border border-red-400/50 bg-red-500/10 px-4 py-2.5 font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50 sm:px-6 sm:py-2"
                   >
                     Play Just Say No
                   </button>
@@ -288,7 +288,7 @@ export function InteractionOverlay({
                 <button
                   onClick={handleAccept}
                   disabled={isSubmitting || isLoading}
-                  className="rounded-lg border border-white/20 bg-white/5 px-6 py-2 font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
+                  className="rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 font-semibold text-white transition hover:bg-white/10 disabled:opacity-50 sm:px-6 sm:py-2"
                 >
                   Accept Swap
                 </button>
@@ -296,7 +296,7 @@ export function InteractionOverlay({
             </>
           ) : interaction.interactionType === 'deal-breaker' ? (
             <>
-              <h2 className="mb-2 text-2xl font-bold text-red-500">
+              <h2 className="mb-2 text-xl font-bold text-red-500 sm:text-2xl">
                 Deal Breaker!
               </h2>
               <p className="mb-6 text-white/80">
@@ -316,13 +316,13 @@ export function InteractionOverlay({
                 })()}
               </div>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3">
                 {interaction.canBeCountered && justSayNoCards.length > 0 && justSayNoCards.map(card => (
                   <button
                     key={card.id}
                     onClick={() => handleJustSayNo(card.id)}
                     disabled={isSubmitting || isLoading}
-                    className="rounded-lg border border-red-400/50 bg-red-500/10 px-6 py-2 font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+                    className="rounded-lg border border-red-400/50 bg-red-500/10 px-4 py-2.5 font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50 sm:px-6 sm:py-2"
                   >
                     Play Just Say No
                   </button>
@@ -330,7 +330,7 @@ export function InteractionOverlay({
                 <button
                   onClick={handleAccept}
                   disabled={isSubmitting || isLoading}
-                  className="rounded-lg border border-white/20 px-6 py-2 font-semibold text-white transition hover:bg-white/10 disabled:opacity-50"
+                  className="rounded-lg border border-white/20 px-4 py-2.5 font-semibold text-white transition hover:bg-white/10 disabled:opacity-50 sm:px-6 sm:py-2"
                 >
                   {isSubmitting ? 'Accepting...' : 'Yield Property Set'}
                 </button>
@@ -338,7 +338,7 @@ export function InteractionOverlay({
             </>
           ) : (
             <>
-              <h2 className="mb-2 text-2xl font-bold text-brass">
+              <h2 className="mb-2 text-xl font-bold text-brass sm:text-2xl">
                 Payment Required
               </h2>
               <p className="mb-6 text-white/80">
@@ -359,19 +359,19 @@ export function InteractionOverlay({
                 </div>
               </div>
 
-              <div className="mb-6 max-h-[40vh] overflow-y-auto pr-2">
+              <div className="mb-6 max-h-[36vh] overflow-y-auto pr-1 sm:max-h-[40vh] sm:pr-2">
                 {allAssets.length === 0 ? (
                   <p className="text-white/50">You have no assets. You can just confirm.</p>
                 ) : (
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 md:grid-cols-5">
                     {allAssets.map(({ card }) => {
                       const isSelected = selectedCardIds.includes(card.id);
                       return (
                         <div
                           key={card.id}
                           onClick={() => toggleSelection(card.id)}
-                          className={`cursor-pointer transition-transform hover:scale-105 ${
-                            isSelected ? 'ring-2 ring-emerald-500 rounded-lg scale-105' : 'opacity-80'
+                          className={`cursor-pointer transition-transform sm:hover:scale-105 ${
+                            isSelected ? 'scale-105 rounded-lg ring-2 ring-emerald-500' : 'opacity-80'
                           }`}
                         >
                           <CardView 
@@ -385,16 +385,15 @@ export function InteractionOverlay({
                 )}
               </div>
 
-              <div className="flex flex-wrap justify-end gap-3">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3">
                 {interaction.canBeCountered && justSayNoCards.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {/* Option to JSN specific modifiers if they exist */}
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     {interaction.activeModifiers?.map((mod, idx) => (
                       <button
                         key={mod.cardId}
                         onClick={() => handleJustSayNo(justSayNoCards[0]!.id, mod.cardId)}
                         disabled={isSubmitting || isLoading}
-                        className="rounded-lg border border-sky-400/50 bg-sky-500/10 px-4 py-2 text-xs font-semibold text-sky-300 transition hover:bg-sky-500/20 disabled:opacity-50"
+                        className="rounded-lg border border-sky-400/50 bg-sky-500/10 px-4 py-2.5 text-xs font-semibold text-sky-300 transition hover:bg-sky-500/20 disabled:opacity-50 sm:py-2"
                       >
                         JSN Double Rent {interaction.activeModifiers!.length > 1 ? `#${idx + 1}` : ''}
                       </button>
@@ -403,7 +402,7 @@ export function InteractionOverlay({
                     <button
                       onClick={() => handleJustSayNo(justSayNoCards[0]!.id)}
                       disabled={isSubmitting || isLoading}
-                      className="rounded-lg border border-red-400/50 bg-red-500/10 px-6 py-2 font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
+                      className="rounded-lg border border-red-400/50 bg-red-500/10 px-4 py-2.5 font-semibold text-red-300 transition hover:bg-red-500/20 disabled:opacity-50 sm:px-6 sm:py-2"
                     >
                       Play Just Say No
                     </button>
@@ -412,7 +411,7 @@ export function InteractionOverlay({
                 <button
                   onClick={handleConfirm}
                   disabled={!targetMet || isSubmitting || isLoading}
-                  className="rounded-lg bg-brass px-6 py-2 font-semibold text-ink transition hover:bg-[#e6bc72] disabled:opacity-50"
+                  className="rounded-lg bg-brass px-4 py-2.5 font-semibold text-ink transition hover:bg-[#e6bc72] disabled:opacity-50 sm:px-6 sm:py-2"
                 >
                   {isSubmitting ? 'Paying...' : 'Confirm Payment'}
                 </button>

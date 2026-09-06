@@ -169,10 +169,10 @@ export function GameTable({ roomId }: { roomId: string }) {
         onInspectCard={setInspectedCard}
       />
 
-      {/* Main Table Area */}
-      <main className="flex-1 mt-14 overflow-y-auto overflow-x-hidden flex flex-col gap-20 p-4 pb-64 min-h-0">
-        {/* Opponents Summary Row */}
-        <div className="flex flex-wrap justify-center gap-4 py-2">
+      {/* Main Table Area — stacked/compact on phone, roomy on desktop */}
+      <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto p-3 pb-52 pt-12 md:mt-0 md:gap-20 md:p-4 md:pb-64 md:pt-14">
+        {/* Opponents: horizontal chips on phone, wrap on desktop */}
+        <div className="-mx-1 flex gap-2 overflow-x-auto no-scrollbar px-1 py-1 md:mx-0 md:flex-wrap md:justify-center md:gap-4 md:overflow-visible md:px-0 md:py-2">
           {gameState.players.filter(p => p.id !== playerId).map(p => (
             <PlayerSummaryPanel 
               key={p.id} 
@@ -185,7 +185,7 @@ export function GameTable({ roomId }: { roomId: string }) {
         </div>
 
         {/* Center Table / Turn Controls */}
-        <div className="flex-1 flex items-center justify-center min-h-[120px]">
+        <div className="flex min-h-[100px] flex-1 items-center justify-center md:min-h-[120px]">
           <CenterTable 
             deckCount={gameState.deck.length}
             discardPile={gameState.discardPile}
@@ -198,7 +198,7 @@ export function GameTable({ roomId }: { roomId: string }) {
 
         {/* Player Board Section */}
         {currentPlayer && (
-          <div className="max-w-6xl mx-auto w-full px-4 mb-4">
+          <div className="mx-auto mb-2 w-full max-w-6xl md:mb-4 md:px-4">
             <PlayerBoardSection 
               player={currentPlayer} 
               isCurrentPlayer={true}

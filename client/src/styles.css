@@ -14,8 +14,10 @@
 body {
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   overflow-x: hidden;
+  overscroll-behavior: none;
 }
 
 .game-table-bg {
@@ -55,6 +57,44 @@ body {
   margin-left: -20px;
 }
 
+/* Phone hand: horizontal scroll dock instead of a fan */
+.card-dock {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 0.75rem 1rem 0.25rem;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.card-dock::-webkit-scrollbar {
+  display: none;
+}
+
+.card-dock-item {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+}
+
+.safe-pb {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.safe-pt {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 button,
 input {
   font: inherit;
@@ -76,4 +116,16 @@ input {
 
 .rotate-y-180 {
   transform: rotateY(180deg);
+}
+
+@media (max-width: 767px) {
+  .card-fan-item:hover {
+    transform: none !important;
+    margin-right: 0;
+    margin-left: -40px;
+  }
+
+  .card-fan-item:first-child:hover {
+    margin-left: 0;
+  }
 }

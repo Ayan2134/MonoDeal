@@ -75,29 +75,29 @@ export function PlayerBoardSection({
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] gap-6 bg-black/20 rounded-xl p-6 border border-white/5">
+    <div className="grid grid-cols-1 gap-4 rounded-xl border border-white/5 bg-black/20 p-3 md:grid-cols-[250px_1fr] md:gap-6 md:p-6">
       {/* Bank Section */}
-      <div className="flex flex-col border-r border-white/10 pr-6">
-        <div className="mb-4 flex items-center justify-between">
+      <div className="flex flex-col border-b border-white/10 pb-4 md:border-b-0 md:border-r md:pb-0 md:pr-6">
+        <div className="mb-3 flex items-center justify-between md:mb-4">
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
             {isCurrentPlayer ? 'Your Bank' : `${player.name}'s Bank`}
           </span>
-          <span className="text-xl font-black text-emerald-400">${bankTotal}M</span>
+          <span className="text-lg font-black text-emerald-400 md:text-xl">${bankTotal}M</span>
         </div>
         
-        <div className="flex flex-col gap-2 mb-8">
+        <div className="mb-4 flex gap-2 overflow-x-auto no-scrollbar md:mb-8 md:flex-col md:overflow-visible">
           {sortedDenominations.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-white/10 py-4 text-center">
+            <div className="w-full rounded-lg border border-dashed border-white/10 py-3 text-center md:py-4">
               <span className="text-[10px] font-bold uppercase tracking-widest text-white/20">Empty Bank</span>
             </div>
           ) : (
             sortedDenominations.map(({ val, count }) => (
-              <div key={val} className="flex items-center justify-between rounded-lg bg-emerald-500/5 border border-emerald-500/10 px-3 py-2">
+              <div key={val} className="flex shrink-0 items-center justify-between gap-3 rounded-lg border border-emerald-500/10 bg-emerald-500/5 px-3 py-2 md:w-auto">
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-6 rounded-sm bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-[10px] font-bold text-emerald-400">
+                  <div className="flex h-4 w-6 items-center justify-center rounded-sm border border-emerald-500/30 bg-emerald-500/20 text-[10px] font-bold text-emerald-400">
                     ${val}M
                   </div>
-                  <span className="text-xs font-bold text-white/80">Value</span>
+                  <span className="hidden text-xs font-bold text-white/80 md:inline">Value</span>
                 </div>
                 <span className="text-xs font-black text-emerald-400">×{count}</span>
               </div>
@@ -105,13 +105,13 @@ export function PlayerBoardSection({
           )}
         </div>
 
-        {/* Bank Card Gallery */}
+        {/* Bank Card Gallery — desktop only (too tall on phone) */}
         {player.bank.length > 0 && (
-          <div className="mt-auto pt-6 border-t border-white/5">
-             <span className="text-[10px] font-black uppercase tracking-widest text-white/20 block mb-4">Banked Items</span>
-             <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="mt-auto hidden border-t border-white/5 pt-6 md:block">
+             <span className="mb-4 block text-[10px] font-black uppercase tracking-widest text-white/20">Banked Items</span>
+             <div className="custom-scrollbar grid max-h-[400px] grid-cols-2 gap-3 overflow-y-auto pr-2">
                 {player.bank.map(card => (
-                   <div key={card.id} className="scale-75 origin-top-left -mb-12 -mr-6">
+                   <div key={card.id} className="-mb-12 -mr-6 origin-top-left scale-75">
                       <CardView card={card} onInspect={() => onInspectCard?.(card)} />
                    </div>
                 ))}
@@ -122,19 +122,19 @@ export function PlayerBoardSection({
 
       {/* Properties Section */}
       <div>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-3 flex items-center justify-between gap-2 md:mb-4">
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
             {isCurrentPlayer ? 'Your Properties' : `${player.name}'s Properties`}
           </span>
-          <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">{player.properties.length} Active Sets</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">{player.properties.length} Sets</span>
         </div>
 
         {player.properties.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-white/5 bg-white/5 py-12 text-center">
-            <p className="text-xs font-bold text-white/20 uppercase tracking-[0.3em]">No property sets established</p>
+          <div className="rounded-2xl border-2 border-dashed border-white/5 bg-white/5 py-8 text-center md:py-12">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/20 md:text-xs">No property sets established</p>
           </div>
         ) : (
-          <div className="flex flex-wrap gap-6">
+          <div className="-mx-1 flex gap-3 overflow-x-auto no-scrollbar px-1 pb-1 md:mx-0 md:flex-wrap md:gap-6 md:overflow-visible md:px-0">
             {player.properties.map((set) => {
               const currentRent = getRent(set);
               const hasRealProperty = set.cards.some(c => c.type === 'property');
@@ -143,19 +143,19 @@ export function PlayerBoardSection({
               const isInvalidWildOnly = isFullSize && !hasRealProperty;
 
               return (
-                <div key={set.setId} className={`relative flex flex-col rounded-2xl border p-4 shadow-2xl min-w-[200px] transition-all hover:scale-[1.02] ${
+                <div key={set.setId} className={`relative flex min-w-[11.5rem] shrink-0 flex-col rounded-2xl border p-3 shadow-2xl transition-all md:min-w-[200px] md:p-4 md:hover:scale-[1.02] ${
                   set.isComplete ? 'border-brass/40 bg-brass/10 shadow-brass/5' : 'border-white/10 bg-white/5 shadow-black/40'
                 } ${highlightState.setId === set.setId ? 'ring-2 ring-brass shadow-[0_0_20px_rgba(216,166,87,0.4)]' : ''}`}>
                   {/* Set Header */}
-                  <div className="mb-4 flex items-center justify-between gap-4">
+                  <div className="mb-3 flex items-center justify-between gap-2 md:mb-4 md:gap-4">
                      <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                            <div className={`h-2.5 w-2.5 rounded-full shadow-sm bg-prop-${set.color.replace('-', '')}`} />
                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">{set.color.replace('-', ' ')}</span>
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="mt-1 flex items-center gap-2">
                            <span className="text-[10px] font-black text-emerald-400">RENT: ${currentRent}M</span>
-                           {set.isComplete && <span className="text-[8px] font-black text-brass uppercase tracking-widest">★ Complete</span>}
+                           {set.isComplete && <span className="text-[8px] font-black uppercase tracking-widest text-brass">★ Complete</span>}
                         </div>
                      </div>
                      <div className="flex items-center gap-1.5">
@@ -170,7 +170,7 @@ export function PlayerBoardSection({
                           </div>
                         )}
                         {isInvalidWildOnly && (
-                          <span className="text-[8px] font-black text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded border border-red-400/20" title="A complete set must have at least one real property card.">
+                          <span className="rounded border border-red-400/20 bg-red-400/10 px-1.5 py-0.5 text-[8px] font-black text-red-400" title="A complete set must have at least one real property card.">
                              WILD ONLY
                           </span>
                         )}
@@ -178,14 +178,15 @@ export function PlayerBoardSection({
                   </div>
 
                   {/* Card Stack */}
-                  <div className="flex -space-x-16 overflow-visible pb-2 pl-2 pr-12">
+                  <div className="flex -space-x-14 overflow-visible pb-2 pl-1 pr-10 md:-space-x-16 md:pl-2 md:pr-12">
                     {set.cards.map((card, i) => (
-                      <div key={card.id} style={{ zIndex: i }} className="group/card relative">
+                      <div key={card.id} style={{ zIndex: i }} className="group/card relative scale-90 origin-bottom md:scale-100">
                          <CardView card={card} onInspect={() => onInspectCard?.(card)} />
                          {isCurrentPlayer && isPlayersTurn && (
                            <button 
+                             type="button"
                              onClick={() => setMovingCard({ card, set })}
-                             className="absolute -top-2 -right-2 z-50 flex h-7 w-14 items-center justify-center rounded-full bg-brass text-[9px] font-black text-ink opacity-0 shadow-xl transition-all group-hover/card:opacity-100 hover:scale-110 active:scale-95"
+                             className="absolute -right-2 -top-2 z-50 flex h-7 w-14 items-center justify-center rounded-full bg-brass text-[9px] font-black text-ink opacity-100 shadow-xl transition-all hover:scale-110 active:scale-95 md:opacity-0 md:group-hover/card:opacity-100"
                            >
                              Move
                            </button>

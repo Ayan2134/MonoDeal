@@ -193,64 +193,122 @@ export function HandSection({
     return diff * 4; // slight curve
   };
 
+  const expandedCard = expandedCardId ? cards.find((c) => c.id === expandedCardId) : undefined;
+
+  function renderContextMenu(card: Card) {
+    return (
+      <CardContextMenu
+        card={card}
+        isPlayersTurn={isPlayersTurn}
+        isLoading={isLoading}
+        gameEnded={gameEnded}
+        onPlayAsProperty={() => handlePlayProperty(card.id)}
+        onPlayAsAction={() => handlePlayAction(card.id, (card as any).actionId)}
+        onBankAsMoney={() => handleBankAsMoney(card.id)}
+        onSelectWildcardColor={() => {
+          setWildcardCardId(card.id);
+          setWildcardCardName(card.name);
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-black/80 to-transparent pb-4 pt-12">
-      <div className="card-fan-container">
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-black/90 via-black/70 to-transparent safe-pb md:from-black/80 md:via-transparent md:pt-12 md:pb-4">
+      {/* Phone: horizontal scroll dock + action sheet */}
+      <div className="md:hidden">
+        {expandedCard ? (
+          <div className="mx-3 mb-2 rounded-xl border border-brass/30 bg-[#181c20]/95 p-3 shadow-2xl backdrop-blur-md">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="truncate text-[10px] font-black uppercase tracking-widest text-brass/70">
+                {expandedCard.name}
+              </p>
+              <button
+                type="button"
+                onClick={() => setExpandedCardId(null)}
+                className="rounded px-2 py-0.5 text-[10px] font-bold uppercase text-white/40"
+              >
+                Close
+              </button>
+            </div>
+            {renderContextMenu(expandedCard)}
+          </div>
+        ) : null}
+
         {cards.length === 0 ? (
-          <div className="mb-8 rounded-full border border-white/10 bg-white/5 px-8 py-2 backdrop-blur-sm">
-            <p className="text-xs font-bold uppercase tracking-widest text-white/40">Your hand is empty</p>
+          <div className="mx-auto mb-3 w-fit rounded-full border border-white/10 bg-white/5 px-6 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Hand empty</p>
           </div>
         ) : (
-          cards.map((card, index) => {
-            const isExpanded = expandedCardId === card.id;
-            const rotation = getRotation(index, cards.length);
-            const translateY = getTranslateY(index, cards.length);
-
-            return (
-              <div
-                key={card.id}
-                className="card-fan-item relative"
-                style={{ 
-                  transform: `rotate(${rotation}deg) translateY(${translateY}px)`,
-                  zIndex: index
-                }}
-              >
-                <CardView 
-                  card={card} 
-                  isSelected={isExpanded} 
-                  onInspect={() => onInspectCard?.(card)}
-                  onClick={() => {
-                    if (gameEnded) return;
-                    setExpandedCardId(isExpanded ? null : card.id);
-                  }} 
-                />
-
-                {isExpanded && (
-                  <div className="absolute bottom-full left-1/2 mb-4 -translate-x-1/2 animate-in fade-in slide-in-from-bottom-4 zoom-in-95">
-                    <div className="rounded-xl border border-brass/30 bg-[#181c20] p-3 shadow-2xl shadow-black/80 backdrop-blur-md">
-                      <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-brass/60">Choose Action</p>
-                      <CardContextMenu
-                        card={card}
-                        isPlayersTurn={isPlayersTurn}
-                        isLoading={isLoading}
-                        gameEnded={gameEnded}
-                        onPlayAsProperty={() => handlePlayProperty(card.id)}
-                        onPlayAsAction={() => handlePlayAction(card.id, (card as any).actionId)}
-                        onBankAsMoney={() => handleBankAsMoney(card.id)}
-                        onSelectWildcardColor={() => {
-                          setWildcardCardId(card.id);
-                          setWildcardCardName(card.name);
-                        }}
-                      />
-                    </div>
-                    {/* Tooltip Arrow */}
-                    <div className="absolute left-1/2 top-full -mt-0.5 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-brass/30 bg-[#181c20]" />
+          <div className="card-dock">
+            {cards.map((card) => {
+              const isExpanded = expandedCardId === card.id;
+              return (
+                <div key={card.id} className="card-dock-item">
+                  <div className={`scale-90 origin-bottom transition ${isExpanded ? 'scale-100' : ''}`}>
+                    <CardView
+                      card={card}
+                      isSelected={isExpanded}
+                      onInspect={() => onInspectCard?.(card)}
+                      onClick={() => {
+                        if (gameEnded) return;
+                        setExpandedCardId(isExpanded ? null : card.id);
+                      }}
+                    />
                   </div>
-                )}
-              </div>
-            );
-          })
+                </div>
+              );
+            })}
+          </div>
         )}
+      </div>
+
+      {/* Desktop: card fan */}
+      <div className="hidden md:block">
+        <div className="card-fan-container">
+          {cards.length === 0 ? (
+            <div className="mb-8 rounded-full border border-white/10 bg-white/5 px-8 py-2 backdrop-blur-sm">
+              <p className="text-xs font-bold uppercase tracking-widest text-white/40">Your hand is empty</p>
+            </div>
+          ) : (
+            cards.map((card, index) => {
+              const isExpanded = expandedCardId === card.id;
+              const rotation = getRotation(index, cards.length);
+              const translateY = getTranslateY(index, cards.length);
+
+              return (
+                <div
+                  key={card.id}
+                  className="card-fan-item relative"
+                  style={{
+                    transform: `rotate(${rotation}deg) translateY(${translateY}px)`,
+                    zIndex: index,
+                  }}
+                >
+                  <CardView
+                    card={card}
+                    isSelected={isExpanded}
+                    onInspect={() => onInspectCard?.(card)}
+                    onClick={() => {
+                      if (gameEnded) return;
+                      setExpandedCardId(isExpanded ? null : card.id);
+                    }}
+                  />
+
+                  {isExpanded ? (
+                    <div className="absolute bottom-full left-1/2 mb-4 -translate-x-1/2 animate-in fade-in slide-in-from-bottom-4 zoom-in-95">
+                      <div className="rounded-xl border border-brass/30 bg-[#181c20] p-3 shadow-2xl shadow-black/80 backdrop-blur-md">
+                        <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-brass/60">Choose Action</p>
+                        {renderContextMenu(card)}
+                      </div>
+                      <div className="absolute left-1/2 top-full -mt-0.5 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-brass/30 bg-[#181c20]" />
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* Overlays */}

@@ -80,20 +80,20 @@ export function GameLogSidebar({ logs, onInspectCard }: GameLogSidebarProps) {
       {/* Toggle Button - Floating on the right edge */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed top-1/2 -translate-y-1/2 z-[110] flex items-center justify-center w-10 h-24 bg-ink/90 border border-brass/30 border-r-0 rounded-l-xl transition-all duration-300 hover:bg-brass/20 group ${
+        className={`fixed top-1/2 z-[110] flex h-16 w-8 -translate-y-1/2 items-center justify-center rounded-l-xl border border-r-0 border-brass/30 bg-ink/90 transition-all duration-300 hover:bg-brass/20 group md:h-24 md:w-10 ${
           isOpen ? 'right-80' : 'right-0'
         }`}
         aria-label={isOpen ? "Close Logs" : "Open Logs"}
       >
-        <div className="flex flex-col items-center gap-2">
-          {isOpen ? <ChevronRight className="w-5 h-5 text-brass" /> : <ChevronLeft className="w-5 h-5 text-brass" />}
-          <ScrollText className="w-5 h-5 text-brass/70 group-hover:text-brass" />
+        <div className="flex flex-col items-center gap-1 md:gap-2">
+          {isOpen ? <ChevronRight className="h-4 w-4 text-brass md:h-5 md:w-5" /> : <ChevronLeft className="h-4 w-4 text-brass md:h-5 md:w-5" />}
+          <ScrollText className="hidden h-5 w-5 text-brass/70 group-hover:text-brass md:block" />
         </div>
       </button>
 
       {/* Sidebar Panel */}
       <aside
-        className={`fixed top-0 right-0 bottom-0 z-[105] w-80 bg-ink/95 border-l border-brass/20 backdrop-blur-md transition-transform duration-300 ease-in-out shadow-2xl flex flex-col ${
+        className={`fixed bottom-0 right-0 top-0 z-[105] flex w-[min(100vw,20rem)] flex-col border-l border-brass/20 bg-ink/95 shadow-2xl backdrop-blur-md transition-transform duration-300 ease-in-out md:w-80 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
