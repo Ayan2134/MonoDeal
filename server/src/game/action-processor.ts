@@ -337,10 +337,27 @@ export class ActionProcessor {
   }
 }
 
+const processorsByRoom = new Map<string, ActionProcessor>();
+
 /**
  * Create a processor instance
  * Typically one per room
  */
 export function createActionProcessor(config?: Partial<ProcessorConfig>): ActionProcessor {
   return new ActionProcessor(config);
+}
+
+export function getProcessor(roomId: string): ActionProcessor {
+  let processor = processorsByRoom.get(roomId);
+
+  if (!processor) {
+    processor = new ActionProcessor();
+    processorsByRoom.set(roomId, processor);
+  }
+
+  return processor;
+}
+
+export function cleanupProcessor(roomId: string): void {
+  processorsByRoom.delete(roomId);
 }

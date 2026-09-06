@@ -42,32 +42,53 @@ type GameStoreState = {
   clearHighlight: () => void;
 };
 
-function emitGameEvent<EventPayload>(
+function createClientActionId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+function emitGameEvent<EventPayload extends object>(
   eventName: 'start-turn' | 'end-turn' | 'play-card' | 'resolve-interaction' | 'rearrange-properties',
   payload: EventPayload,
   options?: { timeoutMs?: number; timeoutError?: string },
 ) {
   const timeoutMs = options?.timeoutMs ?? 10_000;
   const timeoutError = options?.timeoutError ?? 'Request timed out. Please try again.';
+  const actionId = createClientActionId();
+  const request = { ...payload, actionId };
 
   return new Promise<GameStateResult>((resolve) => {
-    let resolved = false;
-    const timeoutId = window.setTimeout(() => {
-      if (resolved) {
-        return;
-      }
-      resolved = true;
-      resolve({ ok: false, error: timeoutError });
-    }, timeoutMs);
+    let settled = false;
+    let attempt = 0;
+    const maxAttempts = 2;
 
-    socket.emit(eventName, payload as never, (result: GameStateResult) => {
-      if (resolved) {
-        return;
-      }
-      resolved = true;
-      window.clearTimeout(timeoutId);
-      resolve(result);
-    });
+    const send = () => {
+      attempt += 1;
+      const timeoutId = window.setTimeout(() => {
+        if (settled) {
+          return;
+        }
+        if (attempt < maxAttempts) {
+          send();
+          return;
+        }
+        settled = true;
+        resolve({ ok: false, error: timeoutError });
+      }, timeoutMs);
+
+      socket.emit(eventName, request as never, (result: GameStateResult) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        window.clearTimeout(timeoutId);
+        resolve(result);
+      });
+    };
+
+    send();
   });
 }
 

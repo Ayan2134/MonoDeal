@@ -1,13 +1,16 @@
 # Monodeal
 
-Monodeal is a full-stack multiplayer web app foundation for a card game. It uses React, Vite, TypeScript, Tailwind, Express, and Socket.IO in a simple monorepo.
+Multiplayer Monopoly Deal in the browser. First player to complete **3 property sets** wins.
+
+React + Vite client, Express + Socket.IO server. The server owns the rules.
 
 ## Structure
 
 ```text
 monodeal/
-  client/   React + Vite + Tailwind app
-  server/   Express + Socket.IO API
+  client/   React + Vite + Tailwind table
+  server/   Express + Socket.IO + game engine
+  shared/   Canonical TypeScript shapes (keep aligned with client and server)
 ```
 
 ## Requirements
@@ -36,6 +39,16 @@ npm run typecheck  # Type-check client and server
 npm run lint       # Lint the client
 ```
 
+## How a game works
+
+- Host creates a room and shares the 6-character code or invite link.
+- 2 or more players join. Host starts the game.
+- Official 106-card deck. Each player is dealt 5 cards.
+- On your turn: draw 2, then take up to 3 actions (bank money, lay property, play an action).
+- Hand limit is 7 at end of turn. Discard the extras.
+- Rent, birthday, debt, Sly Deal, Forced Deal, and Deal Breaker can be paid or cancelled with Just Say No.
+- Houses and hotels go on complete color sets only — not railroads or utilities.
+
 ## Environment
 
 Client variables must use the `VITE_` prefix.
@@ -56,36 +69,31 @@ CLIENT_ORIGIN=http://localhost:5173,http://localhost:5174,http://localhost:5175
 
 For fallback local ports, `CLIENT_ORIGIN` can be a comma-separated list.
 
+Optional Supabase keys on the server persist in-progress rooms across restarts.
+
+## Disconnect grace period
+
+If a player drops (refresh, network blip, closed tab):
+
+- They keep their seat, hand, and properties for **10 minutes**.
+- If it is their turn and they stay disconnected for **30 seconds**, the server ends that turn so the table does not stall.
+- Reconnect with the same browser `playerId` (stored in `localStorage`) to resume.
+
 ## Production
 
-See the deployment guide in [DEPLOYMENT.md](DEPLOYMENT.md) for Vercel + Render configuration, environment variables, and validation steps.
-
-## Current App
-
-- Home page
-- Create Room page
-- Join Room page
-- Lobby page
-- Socket.IO connection boilerplate
-- Room lifecycle placeholders without game logic
-- Persistent browser `playerId` stored in `localStorage`
-- Authoritative Socket.IO room management
-- Join by room code or invite link
-- Reconnect after refresh without creating duplicate players
+See [DEPLOYMENT.md](DEPLOYMENT.md) for Vercel + Render configuration.
 
 ## Socket Events
 
 Client to server:
 
-- `create-room`
-- `join-room`
-- `reconnect-player`
-- `leave-room`
-- `start-game`
+- `create-room`, `join-room`, `reconnect-player`, `leave-room`, `start-game`
+- `start-turn`, `end-turn`, `play-card`, `rearrange-properties`
+- `resolve-interaction`, `respond-to-action`
 
 Server to client:
 
-- `room-updated`
-- `room-error`
-
-This project intentionally does not implement card-game rules yet. The server currently provides connection handling and room/lobby scaffolding so future multiplayer features can build on a clean boundary.
+- `room-updated`, `room-error`
+- `game-updated`, `turn-updated`, `game-state-sync`
+- `player-reconnected`, `player-disconnected`
+- `game-ended`, `winner-announced`

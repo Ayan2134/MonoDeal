@@ -109,3 +109,11 @@ export function getRentForCount(color: PropertyColor, count: number): number {
   const effectiveCount = Math.min(count, config.rentProgression.length);
   return config.rentProgression[effectiveCount - 1] ?? 0;
 }
+
+/** Houses and hotels cannot be built on railroads, utilities, or unassigned wild sets. */
+export function isHouseBonusEligible(color: PropertyColor | 'wild'): boolean {
+  if (color === 'wild') {
+    return false;
+  }
+  return PROPERTY_CONFIGS[color].houseBonusEligible;
+}

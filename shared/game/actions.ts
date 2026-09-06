@@ -1,40 +1,43 @@
-import type { CardId } from './cards';
+import type { CardDestination, CardId, PropertyColor } from './cards';
 
 export enum ActionType {
-  DrawCard = 'draw-card',
-  PlayCard = 'play-card',
-  BankCard = 'bank-card',
-  PlayProperty = 'play-property',
+  StartTurn = 'start-turn',
   EndTurn = 'end-turn',
+  PlayCard = 'play-card',
+  RespondToAction = 'respond-to-action',
+  ResolveInteraction = 'resolve-interaction',
+  RearrangeProperties = 'rearrange-properties',
+  StartGame = 'start-game',
 }
 
-export type DrawCardAction = {
-  type: ActionType.DrawCard;
+export type StartTurnAction = {
+  type: ActionType.StartTurn;
+};
+
+export type EndTurnAction = {
+  type: ActionType.EndTurn;
+  discardCardIds?: CardId[];
 };
 
 export type PlayCardAction = {
   type: ActionType.PlayCard;
   cardId: CardId;
+  destination: CardDestination;
+  propertySetColor?: PropertyColor | 'wild';
+  targetSetId?: string;
 };
 
-export type BankCardAction = {
-  type: ActionType.BankCard;
+export type RearrangePropertiesAction = {
+  type: ActionType.RearrangeProperties;
   cardId: CardId;
+  targetColor: PropertyColor | 'wild';
+  targetSetId: string | 'new';
 };
 
-export type PlayPropertyAction = {
-  type: ActionType.PlayProperty;
-  cardId: CardId;
-  targetSetColor?: string;
-};
-
-export type EndTurnAction = {
-  type: ActionType.EndTurn;
-};
+export type EndTurnOnlyAction = EndTurnAction;
 
 export type GameAction =
-  | DrawCardAction
+  | StartTurnAction
+  | EndTurnAction
   | PlayCardAction
-  | BankCardAction
-  | PlayPropertyAction
-  | EndTurnAction;
+  | RearrangePropertiesAction;

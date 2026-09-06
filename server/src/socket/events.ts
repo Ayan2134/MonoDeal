@@ -5,6 +5,7 @@ import type { GameStateResult, TurnUpdate } from '../game/turn.js';
 import type { PlayCardResult } from '../game/playCard.js';
 import { toStackSnapshot, type StackSnapshot } from '../game/stack.js';
 import { processPlayCard, processRespondToAction, processStartTurn, processEndTurn, processResolveInteraction, processRearrangeProperties } from '../game/action-processing.js';
+import { TURN_DISCONNECT_TIMEOUT_MS } from '../rooms/constants.js';
 import type {
   CreateRoomPayload,
   EndTurnPayload,
@@ -201,9 +202,9 @@ function handleUnexpectedPlayError(
 
 function scheduleTurnDisconnectTimeout(io: MonodealServer, roomId: string, playerId: string) {
   // AUTO-END STUCK TURNS:
-  // If a player is disconnected during their turn for more than 30 seconds,
-  // automatically end their turn so the game doesn't stall
-  // This only triggers if they don't reconnect within 30 seconds
+  // Seat grace is 10 minutes. Turn ownership is shorter: if the turn owner
+  // stays disconnected for TURN_DISCONNECT_TIMEOUT_MS, end their turn so
+  // the table does not stall. They keep their seat and can still reconnect.
   const timerKey = `${roomId}:${playerId}`;
 
   // Clear any existing timer
@@ -232,7 +233,7 @@ function scheduleTurnDisconnectTimeout(io: MonodealServer, roomId: string, playe
     }
 
     turnDisconnectTimers.delete(timerKey);
-  }, 30_000); // 30 second grace period before auto-ending turn
+  }, TURN_DISCONNECT_TIMEOUT_MS);
 
   turnDisconnectTimers.set(timerKey, timer);
 }
@@ -579,7 +580,7 @@ export function registerSocketHandlers(io: MonodealServer, socket: MonodealSocke
       // When a player disconnects (network drop, browser close, etc.):
       // 1. Mark player as disconnected in room (don't remove yet)
       // 2. Clear socketId so they can reconnect with new socket.id
-      // 3. Start removal timer (grace period: 1 min for lobby, 10 min for active game)
+      // 3. Start removal timer (DISCONNECT_GRACE_MS — 10 minutes)
       // 4. Broadcast disconnect to other players so they see "waiting" state
       //
       // If player reconnects within grace period:

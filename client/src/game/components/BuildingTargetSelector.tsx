@@ -1,5 +1,9 @@
 import { PropertySet, PropertyColor } from '../types';
 
+function isHouseBonusEligible(color: PropertySet['color']) {
+  return color !== 'wild' && color !== PropertyColor.Rail && color !== PropertyColor.Utility;
+}
+
 type BuildingTargetSelectorProps = {
   type: 'house' | 'hotel';
   propertySets: PropertySet[];
@@ -14,7 +18,7 @@ export function BuildingTargetSelector({
   onCancel,
 }: BuildingTargetSelectorProps) {
   const eligibleSets = propertySets.filter(set => {
-    if (!set.isComplete) return false;
+    if (!set.isComplete || !isHouseBonusEligible(set.color)) return false;
     if (type === 'house') {
       return !set.houseCard;
     } else {
@@ -29,7 +33,7 @@ export function BuildingTargetSelector({
           Apply {type}
         </h3>
         <p className="mb-6 text-sm text-white/40">
-          Select a complete set to add your {type}.
+          Select a complete set to add your {type}. Railroads and utilities cannot take buildings.
         </p>
 
         {eligibleSets.length === 0 ? (

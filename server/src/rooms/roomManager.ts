@@ -4,35 +4,30 @@ import {
   normalizeRoomCode,
   validateCreateRoomPayload,
   validateJoinRoomPayload,
-  validatePlayCardPayload,
-  validateRespondToActionPayload,
   validateReconnectPayload,
   validateStartGamePayload,
-  validateTurnPayload,
 } from './validation.js';
 import { initializeGameState } from '../game/initialize.js';
-import { endTurn, startTurn, type GameStateResult } from '../game/turn.js';
-import { playCard, type PlayCardResult } from '../game/playCard.js';
-import { resolvePendingStack, respondWithJustSayNo } from '../game/stack.js';
+import { type GameStateResult } from '../game/turn.js';
+import { resolvePendingStack } from '../game/stack.js';
+import { cleanupProcessor } from '../game/action-processor.js';
+import { deduplicationManager } from '../game/deduplication.js';
 import type { GameState } from '../game/state.js';
 import type {
   CreateRoomPayload,
-  EndTurnPayload,
   JoinRoomPayload,
   LeaveRoomPayload,
   Player,
-  PlayCardPayload,
   PublicRoom,
   ReconnectPlayerPayload,
-  RespondToActionPayload,
   Room,
   RoomResult,
-  StartTurnPayload,
   StartGamePayload,
 } from './types.js';
 import { DISCONNECT_GRACE_MS } from './constants.js';
 import { saveRoomSnapshot, loadAllActiveRooms } from './persistence.js';
 import { appendGameLog } from '../game/logger.js';
+import { logReconnectionEvent, validateReconnection } from '../game/reconnect.js';
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -173,27 +168,43 @@ export class RoomManager {
     }
 
     const room = this.roomsById.get(payload.roomId);
-    if (!room) {
-      console.warn(`[RoomRecovery] Reconnect failed: Room ${payload.roomId} not found for player ${payload.playerId}`);
-      return { ok: false, error: 'Room not found.' };
+    const validation = validateReconnection(room, payload.playerId, payload.roomId, DISCONNECT_GRACE_MS);
+
+    if (!validation.valid || !validation.room || !validation.player) {
+      console.warn(`[RoomRecovery] Reconnect failed: ${validation.error} (player ${payload.playerId}, room ${payload.roomId})`);
+      logReconnectionEvent({
+        playerId: payload.playerId,
+        roomId: payload.roomId,
+        success: false,
+        reason: validation.error,
+        gameStarted: Boolean(room?.gameState?.gameStarted),
+        turnOwned: false,
+        timestamp: Date.now(),
+      });
+      return { ok: false, error: validation.error ?? 'Reconnect failed.' };
     }
 
-    const existingPlayer = room.players.find((player) => player.playerId === payload.playerId);
-
-    if (!existingPlayer) {
-      console.warn(`[RoomRecovery] Reconnect failed: Player ${payload.playerId} not part of room ${room.roomCode} (Status: ${room.status})`);
-      return { ok: false, error: 'Player is not part of this room.' };
-    }
+    const existingPlayer = validation.player;
 
     // The browser's durable playerId is the authority here, not socket.id.
     // Socket.IO intentionally gives a new socket.id after reconnects, so we
     // bind the new transport connection back to the existing player record.
-    this.connectExistingPlayer(room, existingPlayer, socketId);
-    
-    void saveRoomSnapshot(room);
+    this.connectExistingPlayer(validation.room, existingPlayer, socketId);
 
-    console.info(`[RoomRecovery] Rebind Success: ${existingPlayer.name} rejoined ${room.roomCode} (socket: ${socketId}, status: ${room.status})`);
-    return { ok: true, room: this.toPublicRoom(room) };
+    void saveRoomSnapshot(validation.room);
+
+    logReconnectionEvent({
+      playerId: payload.playerId,
+      roomId: payload.roomId,
+      success: true,
+      disconnectedDurationMs: validation.sessionDurationMs,
+      gameStarted: Boolean(validation.room.gameState?.gameStarted),
+      turnOwned: Boolean(validation.turnOwned),
+      timestamp: Date.now(),
+    });
+
+    console.info(`[RoomRecovery] Rebind Success: ${existingPlayer.name} rejoined ${validation.room.roomCode} (socket: ${socketId}, status: ${validation.room.status})`);
+    return { ok: true, room: this.toPublicRoom(validation.room) };
   }
 
   leaveRoom(payload: LeaveRoomPayload): PublicRoom | null {
@@ -250,201 +261,6 @@ export class RoomManager {
 
     console.info(`[RoomLifecycle] Game started in room ${room.roomCode}`);
     return { ok: true, room: this.toPublicRoom(room) };
-  }
-
-  startTurn(payload: StartTurnPayload): GameStateResult {
-    const validationError = validateTurnPayload(payload);
-
-    if (validationError) {
-      return { ok: false, error: validationError };
-    }
-
-    const room = this.roomsById.get(payload.roomId);
-
-    if (!room || !room.gameState) {
-      return { ok: false, error: 'Game state not found.' };
-    }
-
-    const player = room.players.find((currentPlayer) => currentPlayer.playerId === payload.playerId);
-
-    if (!player || player.status !== 'connected') {
-      return { ok: false, error: 'Player is not connected.' };
-    }
-
-    if (room.status === 'paused') {
-      return { ok: false, error: 'Game is currently paused. Waiting for players to reconnect.' };
-    }
-
-    const result = startTurn(room.gameState, payload.playerId);
-
-    if (result.ok) {
-      const now = Date.now();
-      room.gameState = result.gameState;
-      room.updatedAt = now;
-      room.lastActivityAt = now;
-      room.roomVersion += 1;
-      
-      this.appendLog(room.roomId, {
-        type: 'turn_start',
-        actorPlayerId: payload.playerId,
-        message: `${player.name} started turn`,
-      });
-
-      void saveRoomSnapshot(room);
-    }
-
-    return result;
-  }
-
-  endTurn(payload: EndTurnPayload): GameStateResult {
-    const validationError = validateTurnPayload(payload);
-
-    if (validationError) {
-      return { ok: false, error: validationError };
-    }
-
-    const room = this.roomsById.get(payload.roomId);
-
-    if (!room || !room.gameState) {
-      return { ok: false, error: 'Game state not found.' };
-    }
-
-    const player = room.players.find((currentPlayer) => currentPlayer.playerId === payload.playerId);
-
-    if (!player || player.status !== 'connected') {
-      return { ok: false, error: 'Player is not connected.' };
-    }
-
-    if (room.status === 'paused') {
-      return { ok: false, error: 'Game is currently paused. Waiting for players to reconnect.' };
-    }
-
-    const result = endTurn(room.gameState, payload.playerId);
-
-    if (result.ok) {
-      const now = Date.now();
-      room.gameState = result.gameState;
-      room.updatedAt = now;
-      room.lastActivityAt = now;
-      room.roomVersion += 1;
-
-      this.appendLog(room.roomId, {
-        type: 'turn_end',
-        actorPlayerId: payload.playerId,
-        message: `${player.name} ended turn`,
-      });
-
-      void saveRoomSnapshot(room);
-    }
-
-    return result;
-  }
-
-  playCard(payload: PlayCardPayload): PlayCardResult {
-    const validationError = validatePlayCardPayload(payload);
-
-    if (validationError) {
-      return { ok: false, error: validationError };
-    }
-
-    const room = this.roomsById.get(payload.roomId);
-
-    if (!room || !room.gameState) {
-      return { ok: false, error: 'Game state not found.' };
-    }
-
-    const player = room.players.find((currentPlayer) => currentPlayer.playerId === payload.playerId);
-
-    if (!player || player.status !== 'connected') {
-      return { ok: false, error: 'Player is not connected.' };
-    }
-
-    if (room.status === 'paused') {
-      return { ok: false, error: 'Game is currently paused. Waiting for players to reconnect.' };
-    }
-
-    const result = playCard(room.gameState, {
-      roomId: payload.roomId,
-      playerId: payload.playerId,
-      cardId: payload.cardId,
-      destination: payload.destination,
-      propertySetColor: payload.propertySetColor,
-      targets: payload.targets,
-    });
-
-    if (result.ok) {
-      const now = Date.now();
-      
-      const gamePlayer = room.gameState.players.find(p => p.id === payload.playerId);
-      const card = room.gameState.players.find(p => p.id === payload.playerId)?.hand.find(c => c.id === payload.cardId);
-
-      this.appendLog(room.roomId, {
-        type: 'card_played',
-        actorPlayerId: payload.playerId,
-        message: `${player.name} played ${card?.name || 'a card'} as ${payload.destination}`,
-        metadata: {
-          cardId: payload.cardId,
-          cardName: card?.name,
-          destination: payload.destination
-        }
-      });
-
-      room.gameState = result.gameState;
-      room.updatedAt = now;
-      room.lastActivityAt = now;
-      room.roomVersion += 1;
-      void saveRoomSnapshot(room);
-    }
-
-    return result;
-  }
-
-  respondToAction(payload: RespondToActionPayload): GameStateResult {
-    const validationError = validateRespondToActionPayload(payload);
-
-    if (validationError) {
-      return { ok: false, error: validationError };
-    }
-
-    const room = this.roomsById.get(payload.roomId);
-
-    if (!room || !room.gameState) {
-      return { ok: false, error: 'Game state not found.' };
-    }
-
-    const player = room.players.find((currentPlayer) => currentPlayer.playerId === payload.playerId);
-
-    if (!player || player.status !== 'connected') {
-      return { ok: false, error: 'Player is not connected.' };
-    }
-
-    if (room.status === 'paused') {
-      return { ok: false, error: 'Game is currently paused. Waiting for players to reconnect.' };
-    }
-
-    const response = respondWithJustSayNo(room.gameState, payload.playerId, payload.cardId, payload.targetStackEntryId);
-
-    if (!response.ok) {
-      return response;
-    }
-
-    room.gameState = response.state;
-    const now = Date.now();
-    room.updatedAt = now;
-    room.lastActivityAt = now;
-    room.roomVersion += 1;
-    void saveRoomSnapshot(room);
-
-    return {
-      ok: true,
-      gameState: room.gameState,
-      turn: {
-        roomId: room.gameState.roomId,
-        currentTurnPlayerId: room.gameState.currentTurnPlayerId,
-        actionsRemaining: room.gameState.actionsRemaining,
-        turnPhase: room.gameState.turnPhase,
-      },
-    };
   }
 
   resolvePendingAction(roomId: string): GameStateResult {
@@ -715,6 +531,8 @@ export class RoomManager {
     if (room.players.length === 0) {
       this.roomsById.delete(room.roomId);
       this.roomIdByCode.delete(room.roomCode);
+      cleanupProcessor(room.roomId);
+      deduplicationManager.clearRoom(room.roomId);
       return;
     }
 

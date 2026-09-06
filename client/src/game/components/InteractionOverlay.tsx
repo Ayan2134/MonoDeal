@@ -31,10 +31,12 @@ export function InteractionOverlay({
   const counterDepth = interaction.counterStack?.counterActions.length || 0;
 
   const allAssets = useMemo(() => {
-    const assets: { card: Card; location: 'bank' | 'property' }[] = [];
+    const assets: { card: Card; location: 'bank' | 'property' | 'building'; setId?: string }[] = [];
     player.bank.forEach(card => assets.push({ card, location: 'bank' }));
     player.properties.forEach(set => {
-      set.cards.forEach(card => assets.push({ card, location: 'property' }));
+      set.cards.forEach(card => assets.push({ card, location: 'property', setId: set.setId }));
+      if (set.houseCard) assets.push({ card: set.houseCard, location: 'building', setId: set.setId });
+      if (set.hotelCard) assets.push({ card: set.hotelCard, location: 'building', setId: set.setId });
     });
     return assets;
   }, [player]);
@@ -52,10 +54,49 @@ export function InteractionOverlay({
   const amountDue = interaction.amountDue ?? 0;
   const targetMet = selectedValue >= amountDue || (totalValue < amountDue && selectedValue === totalValue);
 
-  const toggleSelection = (cardId: string) => {
-    setSelectedCardIds(prev =>
-      prev.includes(cardId) ? prev.filter(id => id !== cardId) : [...prev, cardId]
+  const findSetForCard = (cardId: string) =>
+    player.properties.find((propertySet) =>
+      propertySet.cards.some((card) => card.id === cardId)
+      || propertySet.houseCard?.id === cardId
+      || propertySet.hotelCard?.id === cardId,
     );
+
+  const toggleSelection = (cardId: string) => {
+    setSelectedCardIds((prev) => {
+      const ownerSet = findSetForCard(cardId);
+      const selected = new Set(prev);
+      const isSelected = selected.has(cardId);
+
+      if (!ownerSet) {
+        if (isSelected) selected.delete(cardId);
+        else selected.add(cardId);
+        return [...selected];
+      }
+
+      const propertyIds = ownerSet.cards.map((card) => card.id);
+      const houseId = ownerSet.houseCard?.id;
+      const hotelId = ownerSet.hotelCard?.id;
+
+      if (isSelected) {
+        selected.delete(cardId);
+        const stillPayingProperty = propertyIds.some((id) => selected.has(id));
+        if (!stillPayingProperty && cardId !== hotelId) {
+          if (houseId) selected.delete(houseId);
+          if (hotelId) selected.delete(hotelId);
+        }
+        if (cardId === houseId && hotelId) {
+          selected.delete(hotelId);
+        }
+      } else {
+        selected.add(cardId);
+        if (propertyIds.includes(cardId) || cardId === houseId) {
+          if (houseId) selected.add(houseId);
+          if (hotelId) selected.add(hotelId);
+        }
+      }
+
+      return [...selected];
+    });
   };
 
   const handleConfirm = async () => {
@@ -296,7 +337,7 @@ export function InteractionOverlay({
               </h2>
               <p className="mb-6 text-white/80">
                 <span className="font-bold text-brass">{initiator?.name ?? 'Someone'}</span> requested payment. You owe <span className="font-bold text-white">{amountDue}M</span>.
-                Select cards to pay.
+                Select cards to pay. Paying a property from a set with a House or Hotel includes those buildings.
               </p>
 
               <div className="mb-6 rounded-lg bg-black/40 p-4">

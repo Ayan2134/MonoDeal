@@ -1,4 +1,5 @@
-import type { Card, PropertyCard } from './cards';
+import type { Card } from './cards';
+import type { PropertySet } from './state';
 
 export type PlayerConnectionStatus = 'connected' | 'disconnected';
 
@@ -7,6 +8,6 @@ export type Player = {
   name: string;
   hand: Card[];
   bank: Card[];
-  properties: PropertyCard[];
+  properties: PropertySet[];
   status: PlayerConnectionStatus;
 };

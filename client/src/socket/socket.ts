@@ -68,11 +68,11 @@ type ClientToServerEvents = {
   'leave-room': (payload: { playerId: string; roomId: string }, callback?: (result: RoomResult) => void) => void;
   'start-game': (payload: { playerId: string; roomId: string }, callback: (result: RoomResult) => void) => void;
   'start-turn': (
-    payload: { playerId: string; roomId: string; clientVersion: number },
+    payload: { playerId: string; roomId: string; clientVersion: number; actionId?: string },
     callback: (result: GameStateResult) => void,
   ) => void;
   'end-turn': (
-    payload: { playerId: string; roomId: string; clientVersion: number },
+    payload: { playerId: string; roomId: string; clientVersion: number; discardCardIds?: string[]; actionId?: string },
     callback: (result: GameStateResult) => void,
   ) => void;
   'play-card': (
@@ -80,15 +80,15 @@ type ClientToServerEvents = {
     callback: (result: GameStateResult) => void,
   ) => void;
   'rearrange-properties': (
-    payload: { playerId: string; roomId: string; cardId: string; targetColor: string; targetSetId: string, clientVersion: number },
+    payload: { playerId: string; roomId: string; cardId: string; targetColor: string; targetSetId: string; clientVersion: number; actionId?: string },
     callback: (result: GameStateResult) => void,
   ) => void;
   'respond-to-action': (
-    payload: { playerId: string; roomId: string; cardId: string; targetStackEntryId?: string; clientVersion: number },
+    payload: { playerId: string; roomId: string; cardId: string; targetStackEntryId?: string; clientVersion: number; actionId?: string },
     callback: (result: GameStateResult) => void,
   ) => void;
   'resolve-interaction': (
-    payload: { playerId: string; roomId: string; interactionId: string; resolution: any; clientVersion: number },
+    payload: { playerId: string; roomId: string; interactionId: string; resolution: any; clientVersion: number; actionId?: string },
     callback: (result: GameStateResult) => void,
   ) => void;
 };

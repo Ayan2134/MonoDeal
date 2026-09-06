@@ -1,7 +1,7 @@
 import type { GameState, GamePlayer, PropertySet } from '../state.js';
-import { createNewSet } from '../property.js';
+import { createNewSet, recomputePropertySets } from '../property.js';
 import type { PaymentResolution } from './types.js';
-import type { Card, PropertyCard } from '../types.js';
+import type { Card, PropertyColor } from '../types.js';
 
 export function calculateCardValue(card: Card): number {
   if (card.type === 'money') return card.value;
@@ -11,15 +11,62 @@ export function calculateCardValue(card: Card): number {
   return 0;
 }
 
-export function getTotalPlayerAssetValue(player: GamePlayer): number {
-  let total = 0;
+function clonePlayer(player: GamePlayer): GamePlayer {
+  return {
+    ...player,
+    bank: [...player.bank],
+    hand: [...player.hand],
+    properties: player.properties.map((set) => ({
+      ...set,
+      cards: [...set.cards],
+    })),
+  };
+}
+
+function setBuildingCards(set: PropertySet): Card[] {
+  return [set.houseCard, set.hotelCard].filter((card): card is Card => Boolean(card));
+}
+
+function collectPayableAssets(player: GamePlayer): Map<string, { card: Card; location: 'bank' | 'property' | 'building' }> {
+  const assets = new Map<string, { card: Card; location: 'bank' | 'property' | 'building' }>();
+
   for (const card of player.bank) {
-    total += calculateCardValue(card);
+    assets.set(card.id, { card, location: 'bank' });
   }
+
   for (const set of player.properties) {
     for (const card of set.cards) {
-      total += calculateCardValue(card);
+      assets.set(card.id, { card, location: 'property' });
     }
+    for (const building of setBuildingCards(set)) {
+      assets.set(building.id, { card: building, location: 'building' });
+    }
+  }
+
+  return assets;
+}
+
+/** If you pay a property off a built set, the house/hotel must go with it. Paying a house also takes the hotel. */
+function expandPaymentWithRequiredBuildings(player: GamePlayer, cardIds: string[]): string[] {
+  const selected = new Set(cardIds);
+
+  for (const set of player.properties) {
+    const payingProperty = set.cards.some((card) => selected.has(card.id));
+    const payingHouse = Boolean(set.houseCard && selected.has(set.houseCard.id));
+
+    if (payingProperty || payingHouse) {
+      if (set.houseCard) selected.add(set.houseCard.id);
+      if (set.hotelCard) selected.add(set.hotelCard.id);
+    }
+  }
+
+  return [...selected];
+}
+
+export function getTotalPlayerAssetValue(player: GamePlayer): number {
+  let total = 0;
+  for (const asset of collectPayableAssets(player).values()) {
+    total += calculateCardValue(asset.card);
   }
   return total;
 }
@@ -36,22 +83,12 @@ export function validatePayment(state: GameState, playerId: string, amountDue: n
     return { ok: true, valuePaid: 0, cards: [] };
   }
 
-  let valuePaid = 0;
+  const expandedCardIds = expandPaymentWithRequiredBuildings(player, resolution.cardIds);
+  const allPlayerAssets = collectPayableAssets(player);
   const cardsToPay: Card[] = [];
+  let valuePaid = 0;
 
-  const allPlayerAssets = new Map<string, { card: Card; location: 'bank' | 'property'; color?: string }>();
-  
-  for (const card of player.bank) {
-    allPlayerAssets.set(card.id, { card, location: 'bank' });
-  }
-
-  for (const set of player.properties) {
-    for (const card of set.cards) {
-      allPlayerAssets.set(card.id, { card, location: 'property', color: set.color });
-    }
-  }
-
-  for (const cardId of resolution.cardIds) {
+  for (const cardId of expandedCardIds) {
     const asset = allPlayerAssets.get(cardId);
     if (!asset) {
       return { ok: false, error: `Card ${cardId} is not owned by the player or is not an asset on the board` };
@@ -64,65 +101,57 @@ export function validatePayment(state: GameState, playerId: string, amountDue: n
     return { ok: false, error: `Insufficient payment: required ${requiredAmount}M, provided ${valuePaid}M` };
   }
 
-  // TODO: Validate that properties aren't partially split illegally (e.g. from complete sets, usually this is allowed in Monopoly Deal but taking a property breaks the set).
-  // Actually, in Monopoly Deal, you CAN pay with properties from a complete set, it just breaks the set.
-  // There are no rules against breaking a set for payment, EXCEPT if a house/hotel is on it. 
-  // We'll assume the client ensures houses/hotels are paid first or handled correctly.
-  
   return { ok: true, valuePaid, cards: cardsToPay };
 }
 
 export function applyPayment(state: GameState, payerId: string, payeeId: string, cards: Card[]): GameState {
-  let nextState = { ...state };
-  let payer = nextState.players.find(p => p.id === payerId)!;
-  let payee = nextState.players.find(p => p.id === payeeId)!;
+  const nextState: GameState = {
+    ...state,
+    discardPile: [...state.discardPile],
+    players: state.players.map((player) => clonePlayer(player)),
+  };
+
+  const payer = nextState.players.find((player) => player.id === payerId);
+  const payee = nextState.players.find((player) => player.id === payeeId);
+  if (!payer || !payee) {
+    return nextState;
+  }
+
+  const paidIds = new Set(cards.map((card) => card.id));
+
+  payer.bank = payer.bank.filter((card) => !paidIds.has(card.id));
+  payer.properties = payer.properties.map((set) => ({
+    ...set,
+    cards: set.cards.filter((card) => !paidIds.has(card.id)),
+    houseCard: set.houseCard && paidIds.has(set.houseCard.id) ? undefined : set.houseCard,
+    hotelCard: set.hotelCard && paidIds.has(set.hotelCard.id) ? undefined : set.hotelCard,
+  }));
 
   for (const card of cards) {
-    // Remove from payer
-    let removed = false;
-    // Check bank
-    const bankIndex = payer.bank.findIndex(c => c.id === card.id);
-    if (bankIndex >= 0) {
-      payer.bank.splice(bankIndex, 1);
-      removed = true;
-    }
-
-    if (!removed) {
-      // Check properties
-      for (const set of payer.properties) {
-        const propIndex = set.cards.findIndex(c => c.id === card.id);
-        if (propIndex >= 0) {
-          set.cards.splice(propIndex, 1);
-          set.isComplete = false; // Breaking a set
-          removed = true;
-          break;
-        }
-      }
-      payer.properties = payer.properties.filter(set => set.cards.length > 0);
-    }
-
-    // Add to payee
-    if (card.type === 'money' || card.type === 'action') {
-      payee.bank.push(card);
-    } else if (card.type === 'property' || card.type === 'wildcard') {
-      // Auto-assign property to payee's sets
-      const propColor = card.type === 'property' ? card.color : card.colors[0];
+    if (card.type === 'property' || card.type === 'wildcard') {
+      const assignedColor = card.type === 'wildcard' ? card.assignedColor : undefined;
+      const propColor = card.type === 'property' ? card.color : assignedColor ?? card.colors[0];
       if (!propColor) continue;
-      let targetSet = payee.properties.find(set => set.color === propColor && !set.isComplete);
+
+      let targetSet = payee.properties.find((set) => set.color === propColor && !set.isComplete);
       if (!targetSet) {
-        const { setId } = createNewSet(propColor);
-        targetSet = { setId, color: propColor, cards: [], isComplete: false };
+        targetSet = createNewSet(propColor as PropertyColor);
         payee.properties.push(targetSet);
       }
       targetSet.cards.push(card);
-      // We don't auto-complete sets here, but we could check. For simplicity, just add it.
+      continue;
     }
+
+    payee.bank.push(card);
   }
 
-  nextState.players = nextState.players.map(p => {
-    if (p.id === payerId) return payer;
-    if (p.id === payeeId) return payee;
-    return p;
+  const recomputedPayer = recomputePropertySets(payer, nextState.discardPile);
+  const recomputedPayee = recomputePropertySets(payee, nextState.discardPile);
+
+  nextState.players = nextState.players.map((player) => {
+    if (player.id === payerId) return recomputedPayer;
+    if (player.id === payeeId) return recomputedPayee;
+    return player;
   });
 
   return nextState;

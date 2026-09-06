@@ -57,16 +57,12 @@ function removeCardFromHand(player: GamePlayer, cardId: string): { card: Card | 
   };
 }
 
-export function isResponseEligibleAction(actionId: string) {
-  // We removed interaction cards (rent, debt-collector, birthday, steal, deal-breaker, forced-swap)
-  // from here so they immediately execute and spawn their own interaction UI.
-  // The generic response window is only for non-interaction actions if any, or none.
-  const eligible = new Set([
-    'house',
-    'hotel',
-  ]);
-
-  return eligible.has(actionId);
+export function isResponseEligibleAction(_actionId: string) {
+  // Targeted actions (rent, debt, birthday, steal, swap, deal-breaker) open
+  // interaction UIs immediately. House and hotel are self-plays on your own
+  // set, so they also apply immediately — Just Say No is for actions played
+  // against you. The generic stack window is unused.
+  return false;
 }
 
 export function toStackSnapshot(state: GameState): StackSnapshot {

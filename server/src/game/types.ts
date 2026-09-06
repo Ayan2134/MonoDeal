@@ -1,3 +1,4 @@
+/** Runtime card types. Keep aligned with shared/game/cards.ts and client/src/game/types.ts. */
 export enum CardType {
   Property = 'property',
   Money = 'money',

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { CardType, PropertyColor, type Card, type PropertyCard, type WildcardCard } from './types.js';
 import type { GamePlayer, PropertySet } from './state.js';
+import { isHouseBonusEligible } from './cards/propertyConfig.js';
 
 const PROPERTY_SET_SIZES: Record<string, number> = {
   brown: 2,
@@ -208,6 +209,9 @@ export function addBuildingToSet(
 
   const set = { ...nextProperties[setIndex]! };
   if (!set.isComplete) return { ok: false, error: 'Buildings can only be added to complete sets.' };
+  if (!isHouseBonusEligible(set.color)) {
+    return { ok: false, error: 'Houses and hotels cannot be built on Railroads or Utilities.' };
+  }
 
   const actionCard = buildingCard as any;
   if (actionCard.actionId === 'house') {

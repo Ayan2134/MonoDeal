@@ -1,3 +1,4 @@
+/** Table-side card types. Keep aligned with shared/game/cards.ts and server/src/game/types.ts. */
 export enum CardType {
   Property = 'property',
   Money = 'money',
@@ -211,12 +212,36 @@ export type GameLogEntry = {
   metadata?: Record<string, any>;
 };
 
+export type StackEntry = {
+  id: string;
+  kind: 'action' | 'counter';
+  actorId: string;
+  actionId: string;
+  cardId: string;
+  targetEntryId?: string;
+  createdAt: number;
+};
+
+export type PendingAction = {
+  id: string;
+  actorId: string;
+  actionCard: ActionCard;
+  stackEntryId: string;
+  enqueuedAt: number;
+};
+
 export type GameState = {
   roomId: string;
   players: GamePlayer[];
   deck: Card[];
   discardPile: Card[];
+  actionStack: StackEntry[];
+  pendingActions: PendingAction[];
   activeInteractions: PendingInteraction[];
+  responseWindow: {
+    isOpen: boolean;
+    deadlineAt: number | null;
+  };
   currentTurnPlayerId: string | null;
   turnPhase: TurnPhase;
   actionsRemaining: number;
@@ -240,6 +265,7 @@ export type BaseGamePayload = {
   playerId: string;
   roomId: string;
   clientVersion: number;
+  actionId?: string;
 };
 
 export type EndTurnPayload = BaseGamePayload & {
@@ -255,6 +281,7 @@ export type PlayCardPayload = {
   targetSetId?: string;
   targets?: EffectTargetSelection;
   clientVersion: number;
+  actionId?: string;
 };
 
 export type RearrangePropertiesPayload = {
@@ -264,6 +291,7 @@ export type RearrangePropertiesPayload = {
   targetColor: string;
   targetSetId: string;
   clientVersion: number;
+  actionId?: string;
 };
 
 export type GameStateResult =

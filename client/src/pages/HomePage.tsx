@@ -26,10 +26,10 @@ export function HomePage() {
   return (
     <section className="grid min-h-[70vh] items-center gap-10 lg:grid-cols-[1fr_0.8fr]">
       <div>
-        <p className="mb-4 text-sm font-medium uppercase tracking-[0.18em] text-brass">Multiplayer card table</p>
+        <p className="mb-4 text-sm font-medium uppercase tracking-[0.18em] text-brass">Monopoly Deal</p>
         <h1 className="text-5xl font-bold leading-tight text-white sm:text-6xl">Monodeal</h1>
         <p className="mt-5 max-w-2xl text-lg leading-8 text-white/70">
-          A clean real-time foundation for creating rooms, joining friends, and preparing a card-game lobby.
+          Play Monopoly Deal with friends in real time. Bank cash, steal sets, charge rent — first to 3 complete property sets wins.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           {hasStoredSession && !room && (

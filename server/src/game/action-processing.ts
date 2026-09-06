@@ -13,39 +13,11 @@
  */
 
 import { roomManager } from '../rooms/roomManager.js';
-import type { GameState } from './state.js';
 import { ActionType, createAction, type PlayCardAction, type RespondToActionAction, type StartTurnAction, type EndTurnAction, type ResolveInteractionAction, type RearrangePropertiesAction } from './action-types.js';
-import { ActionProcessor } from './action-processor.js';
+import { getProcessor } from './action-processor.js';
 import type { PlayCardPayload, RespondToActionPayload, StartTurnPayload, EndTurnPayload, ResolveInteractionPayload, RearrangePropertiesPayload } from '../rooms/types.js';
 import type { GameStateResult } from './turn.js';
 import { buildTurnUpdate } from './turn.js';
-
-/**
- * Action processor per room
- * Created on first action, cleaned up when room closes
- */
-const processorsByRoom = new Map<string, ActionProcessor>();
-
-/**
- * Get or create processor for a room
- */
-function getProcessor(roomId: string): ActionProcessor {
-  let processor = processorsByRoom.get(roomId);
-
-  if (!processor) {
-    processor = new ActionProcessor();
-    processorsByRoom.set(roomId, processor);
-  }
-
-  return processor;
-}
-
-/**
- * Clean up processor for room
- */
-export function cleanupProcessor(roomId: string): void {
-  processorsByRoom.delete(roomId);
-}
 
 /**
  * Process a play-card action
@@ -80,6 +52,7 @@ export function processPlayCard(payload: PlayCardPayload): GameStateResult {
       targetSetId: payload.targetSetId,
       targets: payload.targets,
     },
+    payload.actionId,
   );
 
   // Process through action processor
@@ -126,6 +99,7 @@ export function processRespondToAction(payload: RespondToActionPayload): GameSta
       cardId: payload.cardId,
       targetStackEntryId: payload.targetStackEntryId,
     },
+    payload.actionId,
   );
 
   const processor = getProcessor(payload.roomId);
@@ -166,6 +140,7 @@ export function processStartTurn(payload: StartTurnPayload): GameStateResult {
     payload.roomId,
     payload.clientVersion,
     {},
+    payload.actionId,
   );
 
   const processor = getProcessor(payload.roomId);
@@ -208,6 +183,7 @@ export function processEndTurn(payload: EndTurnPayload): GameStateResult {
     {
       discardCardIds: payload.discardCardIds,
     },
+    payload.actionId,
   );
 
   const processor = getProcessor(payload.roomId);
@@ -251,6 +227,7 @@ export function processResolveInteraction(payload: ResolveInteractionPayload): G
       interactionId: payload.interactionId,
       resolution: payload.resolution,
     },
+    payload.actionId,
   );
 
   const processor = getProcessor(payload.roomId);
@@ -312,6 +289,7 @@ export function processRearrangeProperties(payload: RearrangePropertiesPayload):
       targetColor: payload.targetColor as any,
       targetSetId: payload.targetSetId,
     },
+    payload.actionId,
   );
 
   const processor = getProcessor(payload.roomId);

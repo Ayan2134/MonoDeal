@@ -119,6 +119,7 @@ export type StartTurnPayload = {
   // Version of game state client has when submitting action
   // Server uses this to reject stale actions
   clientVersion: number;
+  actionId?: string;
 };
 
 export type EndTurnPayload = {
@@ -126,6 +127,7 @@ export type EndTurnPayload = {
   roomId: string;
   clientVersion: number;
   discardCardIds?: string[];
+  actionId?: string;
 };
 
 export type PlayCardPayload = {
@@ -137,6 +139,7 @@ export type PlayCardPayload = {
   targetSetId?: string;
   targets?: EffectTargetSelection;
   clientVersion: number;
+  actionId?: string;
 };
 
 export type RearrangePropertiesPayload = {
@@ -146,6 +149,7 @@ export type RearrangePropertiesPayload = {
   targetColor: string;
   targetSetId: string;
   clientVersion: number;
+  actionId?: string;
 };
 
 export type RespondToActionPayload = {
@@ -154,6 +158,7 @@ export type RespondToActionPayload = {
   cardId: string;
   targetStackEntryId?: string;
   clientVersion: number;
+  actionId?: string;
 };
 
 export type ResolveInteractionPayload = {
@@ -162,4 +167,5 @@ export type ResolveInteractionPayload = {
   interactionId: string;
   resolution: InteractionResolutionPayload;
   clientVersion: number;
+  actionId?: string;
 };

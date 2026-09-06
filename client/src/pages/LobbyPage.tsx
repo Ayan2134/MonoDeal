@@ -118,7 +118,7 @@ export function LobbyPage() {
         title={isReconnecting ? "Restoring Session" : `Room ${room?.roomCode ?? '------'}`}
         description={isReconnecting 
           ? "We're automatically reconnecting you to your game. Please wait..." 
-          : "Players can gather here before game rules and table state are introduced."
+          : "Share the room code, then the host starts the game. First to 3 complete property sets wins."
         }
       />
       {error ? <p className="rounded-md border border-red-400/20 bg-red-950/40 px-4 py-3 text-sm text-red-200">{error}</p> : null}
@@ -177,7 +177,7 @@ export function LobbyPage() {
             <h2 className="text-xl font-semibold">Room code</h2>
             <p className="mt-4 font-mono text-4xl font-bold tracking-widest text-brass">{room?.roomCode ?? '------'}</p>
             <p className="mt-4 text-sm leading-6 text-white/60">
-              Share this code with friends. Game setup, deck state, and player actions can be layered in next.
+              Share this code or the invite link. Need at least two players to start.
             </p>
             {inviteUrl ? (
               <div className="mt-4 rounded-md bg-white/5 p-3">

@@ -1,3 +1,8 @@
+/**
+ * Shared card types for MonoDeal.
+ * Keep aligned with server/src/game/types.ts and client/src/game/types.ts.
+ */
+
 export enum CardType {
   Property = 'property',
   Money = 'money',
@@ -20,10 +25,26 @@ export enum PropertyColor {
 
 export type CardId = string;
 
+export type CardMetadata = {
+  description?: string;
+  gameplayDescription?: string;
+  rulesText?: string;
+  officialRulesText?: string;
+  instructions?: string;
+  rentProgression?: number[];
+  setSize?: number;
+  houseBonusEligible?: boolean;
+  propertyInfo?: string;
+  wildcardInfo?: string;
+  attachmentInfo?: string;
+};
+
 export type CardBase = {
   id: CardId;
   type: CardType;
   name: string;
+  value: number;
+  metadata?: CardMetadata;
 };
 
 export type PropertyCard = CardBase & {
@@ -33,18 +54,29 @@ export type PropertyCard = CardBase & {
 
 export type MoneyCard = CardBase & {
   type: CardType.Money;
-  value: number;
 };
 
 export type ActionCard = CardBase & {
   type: CardType.Action;
   actionId: string;
-  value?: number;
+  actionCategory?: 'payment' | 'property' | 'counter' | 'utility' | 'modifier' | 'building';
+  supportedColors?: PropertyColor[];
+  affectsAllPlayers?: boolean;
+  wildcardRent?: boolean;
+  attachable?: boolean;
+  modifierTarget?: string;
 };
 
 export type WildcardCard = CardBase & {
   type: CardType.Wildcard;
   colors: PropertyColor[];
+  assignedColor?: PropertyColor;
 };
 
 export type Card = PropertyCard | MoneyCard | ActionCard | WildcardCard;
+
+export enum CardDestination {
+  Bank = 'bank',
+  Property = 'property',
+  Discard = 'discard',
+}

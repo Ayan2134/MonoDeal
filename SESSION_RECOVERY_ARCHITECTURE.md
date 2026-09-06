@@ -35,7 +35,8 @@
  *      - socket.id cleared
  *      - lastSeen updated to current time
  *      - disconnectedAt set to current time
- *   4. Removal timer started (DISCONNECT_GRACE_MS = 10 minutes for active games)
+ *   4. Removal timer started (DISCONNECT_GRACE_MS = 10 minutes)
+ *   4b. If they own the turn, a separate 30s timer may auto-end that turn
  *   5. Room update broadcasted (players see status=disconnected)
  *   6. player-disconnected event sent to all clients
  *
@@ -172,20 +173,29 @@
  * TIMEOUT SYSTEM
  * ============================================================================
  *
- * Grace Period Constants:
- *   - DISCONNECT_GRACE_MS: 10 minutes (600,000 ms) for active games
- *   - Could be 1 minute for lobby-only (not implemented yet)
+ * Grace Period Constants (server/src/rooms/constants.ts):
+ *   - DISCONNECT_GRACE_MS: 10 minutes (600,000 ms) — keep the seat
+ *   - TURN_DISCONNECT_TIMEOUT_MS: 30 seconds — auto-end their turn only
+ *
+ * These are different on purpose. A refresh or dropped Wi-Fi should not
+ * kick you out of a match. The table should still move if you vanish
+ * mid-turn.
  *
  * Timeline:
  *   T+0s:  Player disconnects → markDisconnected() called
- *   T+0s:  Timer scheduled for T+600s
+ *   T+0s:  Seat-removal timer scheduled for T+600s
+ *   T+0s:  If they own the turn, turn-end timer scheduled for T+30s
  *   T+0s:  Broadcast room update
  *   T+1s:  Player reconnects → reconnect-player event
  *   T+1s:  clearCleanupTimer() cancels the T+600s timer
  *   T+1s:  connectExistingPlayer() restores player
  *   T+1s:  Broadcast reconnection
  *
- *   If player doesn't reconnect:
+ *   If they stay disconnected through their turn:
+ *   T+30s:  scheduleTurnDisconnectTimeout ends the turn
+ *   T+30s:  Player still seated; next connected player plays
+ *
+ *   If player doesn't reconnect at all:
  *   T+600s: Timeout fires → scheduleDisconnectedPlayerRemoval callback
  *   T+600s: removePlayer() called
  *   T+600s: Player removed from room
@@ -227,6 +237,7 @@
  * Exported functions:
  *
  *   validateReconnection(room, playerId, roomId, gracePeriodMs)
+ *   - Called by RoomManager.reconnectPlayer
  *   - Validates reconnection attempt
  *   - Checks player exists, session not expired
  *   - Returns validation + player data
@@ -318,10 +329,7 @@
  *    - Lobby: 1 minute (quick recovery only)
  *    - Active game: 10 minutes (generous recovery)
  *
- * 2. Automatic turn skip if player disconnects too long
- *    - If disconnected > 2 minutes during their turn
- *    - Automatically end their turn
- *    - Skip to next player
+ * 2. Automatic turn skip — implemented (30 seconds, TURN_DISCONNECT_TIMEOUT_MS)
  *
  * 3. Persistent game state to disk
  *    - Currently all in-memory
