@@ -11,6 +11,15 @@ export const debtCollectionEffect: EffectHandler = (context) => {
 
   const targetPlayerId = targets.playerIds[0]!;
 
+  if (targetPlayerId === actorId) {
+    return { ok: false, error: 'You cannot charge yourself with Debt Collector.' };
+  }
+
+  const targetPlayer = state.players.find((player) => player.id === targetPlayerId);
+  if (!targetPlayer) {
+    return { ok: false, error: 'Target player not found.' };
+  }
+
   const newInteraction = {
     interactionId: randomUUID(),
     interactionType: 'payment' as const,

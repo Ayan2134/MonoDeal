@@ -64,6 +64,10 @@ export function playCard(state: GameState, input: PlayCardInput): PlayCardResult
     return { ok: false, error: 'Wait for the response window to resolve.' };
   }
 
+  if (state.activeInteractions.length > 0) {
+    return { ok: false, error: 'Wait for pending actions to resolve before playing another card.' };
+  }
+
   if (state.currentTurnPlayerId !== input.playerId) {
     return { ok: false, error: 'It is not your turn.' };
   }
@@ -109,6 +113,15 @@ export function playCard(state: GameState, input: PlayCardInput): PlayCardResult
 
   if (input.destination === CardDestination.Discard && removed.card.type !== CardType.Action) {
     return { ok: false, error: 'Only action cards can be discarded.' };
+  }
+
+  // Just Say No is only a response to an action against you (or banked as money).
+  if (
+    input.destination === CardDestination.Discard
+    && removed.card.type === CardType.Action
+    && removed.card.actionId === 'just-say-no'
+  ) {
+    return { ok: false, error: 'Just Say No can only be played in response to an action against you. Bank it as money instead.' };
   }
 
   let updatedPlayer: GamePlayer = removed.player;

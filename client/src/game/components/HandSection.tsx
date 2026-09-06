@@ -84,6 +84,10 @@ export function HandSection({
       setPendingDTRId(cardId);
       return;
     }
+    if (actionId === 'just-say-no') {
+      // Response-only card; bank it instead of playing into the center.
+      return;
+    }
 
     const requiresTarget = actionId && ['debt-collector', 'sly-deal', 'forced-swap'].includes(actionId);
     

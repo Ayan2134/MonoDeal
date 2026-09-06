@@ -4,39 +4,42 @@ import { appendLogToState } from '../logger.js';
 
 export const birthdayCollectionEffect: EffectHandler = (context) => {
   const { state, actorId } = context;
-  
-  const targetPlayerIds = state.players.filter(p => p.id !== actorId).map(p => p.id);
 
-  if (targetPlayerIds.length === 0) {
+  // One interaction per opponent so Just Say No only cancels that player's gift.
+  const targets = state.players.filter(
+    (player) => player.id !== actorId && player.status === 'connected',
+  );
+
+  if (targets.length === 0) {
     return { ok: true, state };
   }
 
-  const newInteraction = {
+  const interactions = targets.map((target) => ({
     interactionId: randomUUID(),
     interactionType: 'payment' as const,
     initiatorPlayerId: actorId,
-    targetPlayerIds,
-    amountDue: 2, // It's My Birthday is 2M from everyone
+    targetPlayerIds: [target.id],
+    amountDue: 2,
     requiredResponseType: 'payment' as const,
     createdAt: Date.now(),
     expiresAt: null,
-    canBeCountered: true 
-  };
+    canBeCountered: true,
+  }));
 
   const nextState = {
     ...state,
-    activeInteractions: [...state.activeInteractions, newInteraction]
+    activeInteractions: [...state.activeInteractions, ...interactions],
   };
 
-  const player = state.players.find(p => p.id === actorId);
+  const player = state.players.find((p) => p.id === actorId);
   appendLogToState(nextState, {
     type: 'payment',
     actorPlayerId: actorId,
     message: `${player?.name || 'Someone'} charged 2M from everyone using It's My Birthday`,
   });
 
-  return { 
-    ok: true, 
-    state: nextState
+  return {
+    ok: true,
+    state: nextState,
   };
 };

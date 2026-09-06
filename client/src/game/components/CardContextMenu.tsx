@@ -75,25 +75,28 @@ export function CardContextMenu({
     );
   }
 
-  // Action cards: show "Play Action" or "Bank as Money"
+  // Action cards: Just Say No is bank-only as a turn play (response path is separate).
   if (card.type === CardType.Action) {
+    const isJustSayNo = card.actionId === 'just-say-no';
     return (
       <div className="flex flex-col gap-2">
-        <button
-          onClick={onPlayAsAction}
-          disabled={isDisabled}
-          className="rounded-md bg-sky-500/20 px-3 py-2 text-xs font-semibold text-sky-300 transition hover:bg-sky-500/30 disabled:opacity-50"
-          type="button"
-        >
-          Play Action
-        </button>
+        {!isJustSayNo ? (
+          <button
+            onClick={onPlayAsAction}
+            disabled={isDisabled}
+            className="rounded-md bg-sky-500/20 px-3 py-2 text-xs font-semibold text-sky-300 transition hover:bg-sky-500/30 disabled:opacity-50"
+            type="button"
+          >
+            Play Action
+          </button>
+        ) : null}
         <button
           onClick={onBankAsMoney}
           disabled={isDisabled}
           className="rounded-md bg-emerald-500/20 px-3 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/30 disabled:opacity-50"
           type="button"
         >
-          Bank as Money
+          {isJustSayNo ? 'Bank as Money (4M)' : 'Bank as Money'}
         </button>
       </div>
     );

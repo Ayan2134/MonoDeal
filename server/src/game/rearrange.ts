@@ -1,4 +1,5 @@
 import type { GameState } from './state.js';
+import { TurnPhase } from './state.js';
 import type { PropertyColor } from './types.js';
 import { appendLogToState } from './logger.js';
 import { moveCardBetweenSets } from './property.js';
@@ -15,6 +16,10 @@ export type RearrangePropertiesInput = {
 export function rearrangeProperties(state: GameState, input: RearrangePropertiesInput): GameStateResult {
   if (state.currentTurnPlayerId !== input.playerId) {
     return { ok: false, error: 'It is not your turn.' };
+  }
+
+  if (state.turnPhase !== TurnPhase.Action) {
+    return { ok: false, error: 'You can rearrange properties during the action phase of your turn.' };
   }
 
   if (state.activeInteractions.length > 0) {

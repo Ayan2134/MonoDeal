@@ -32,9 +32,15 @@ export function InteractionOverlay({
 
   const allAssets = useMemo(() => {
     const assets: { card: Card; location: 'bank' | 'property' | 'building'; setId?: string }[] = [];
-    player.bank.forEach(card => assets.push({ card, location: 'bank' }));
+    player.bank.forEach(card => {
+      if (card.type === 'wildcard' && (card.value ?? 0) <= 0) return;
+      assets.push({ card, location: 'bank' });
+    });
     player.properties.forEach(set => {
-      set.cards.forEach(card => assets.push({ card, location: 'property', setId: set.setId }));
+      set.cards.forEach(card => {
+        if (card.type === 'wildcard' && (card.value ?? 0) <= 0) return;
+        assets.push({ card, location: 'property', setId: set.setId });
+      });
       if (set.houseCard) assets.push({ card: set.houseCard, location: 'building', setId: set.setId });
       if (set.hotelCard) assets.push({ card: set.hotelCard, location: 'building', setId: set.setId });
     });

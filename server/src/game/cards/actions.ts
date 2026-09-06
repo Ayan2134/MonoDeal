@@ -145,7 +145,7 @@ export const ACTION_SEEDS: CardSeed[] = [
   }),
 
   // Double The Rent — play with a rent card to double the amount (costs 1 extra action)
-  ...repeatAction('DOUBLE THE RENT', 'double-the-rent', 'modifier', 2, 2, { 
+  ...repeatAction('DOUBLE THE RENT', 'double-the-rent', 'modifier', 1, 2, { 
     modifierTarget: 'rent',
     metadata: {
       description: "Double the rent on any Rent card played. Can be played with another Double The Rent card.",

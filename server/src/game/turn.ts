@@ -69,6 +69,10 @@ export function startTurn(state: GameState, playerId: string): GameStateResult {
     return { ok: false, error: 'Wait for the response window to resolve.' };
   }
 
+  if (state.activeInteractions.length > 0) {
+    return { ok: false, error: 'Wait for pending actions to resolve.' };
+  }
+
   if (state.currentTurnPlayerId !== playerId) {
     return { ok: false, error: 'It is not your turn.' };
   }
@@ -123,6 +127,10 @@ export function endTurn(state: GameState, playerId: string, discardCardIds?: str
 
   if (state.responseWindow.isOpen) {
     return { ok: false, error: 'Wait for the response window to resolve.' };
+  }
+
+  if (state.activeInteractions.length > 0) {
+    return { ok: false, error: 'Wait for pending actions to resolve before ending your turn.' };
   }
 
   if (state.currentTurnPlayerId !== playerId) {

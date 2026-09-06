@@ -2,6 +2,19 @@ import { supabase } from '../db/supabase.js';
 import type { Room, RoomStatus, RecoveryMetadata, ReconnectMetadata } from './types.js';
 import type { GameState } from '../game/state.js';
 
+function parseGameStateJson(value: unknown): GameState | undefined {
+  if (value == null || value === '') {
+    return undefined;
+  }
+
+  const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+  if (!parsed || typeof parsed !== 'object' || Object.keys(parsed as object).length === 0) {
+    return undefined;
+  }
+
+  return parsed as GameState;
+}
+
 export async function saveRoomSnapshot(room: Room) {
   if (!supabase) return;
 
@@ -25,7 +38,7 @@ export async function saveRoomSnapshot(room: Room) {
     const snapshot = {
       room_id: room.roomId,
       status: room.status,
-      game_state_json: room.gameState ? JSON.stringify(room.gameState) : {},
+      game_state_json: room.gameState ?? {},
       room_version: room.roomVersion,
       created_at: new Date(room.createdAt).toISOString(),
       updated_at: new Date(room.updatedAt).toISOString(),
@@ -73,8 +86,7 @@ export async function loadRoomSnapshot(roomId: string): Promise<Room | null> {
     }
 
     // DESERIALIZATION: map snake_case DB fields back to camelCase
-    const rawGameState = data.game_state_json ? JSON.parse(data.game_state_json) : undefined;
-    const gameState = (rawGameState && Object.keys(rawGameState).length > 0) ? rawGameState as GameState : undefined;
+    const gameState = parseGameStateJson(data.game_state_json);
     const recoveryMetadata = data.recovery_metadata as any;
 
     const room: Room = {
@@ -130,8 +142,7 @@ export async function loadAllActiveRooms(): Promise<Room[]> {
 
     for (const record of data) {
       try {
-        const rawGameState = record.game_state_json ? JSON.parse(record.game_state_json) : undefined;
-        const gameState = (rawGameState && Object.keys(rawGameState).length > 0) ? rawGameState as GameState : undefined;
+        const gameState = parseGameStateJson(record.game_state_json);
         const recoveryMetadata = record.recovery_metadata as any;
         
         // RECOVERY RULES:

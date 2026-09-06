@@ -1,8 +1,36 @@
 import type { GameState } from '../state.js';
 import type { PendingInteraction, InteractionResolutionPayload, PaymentResolution, PropertySelectionResolution } from './types.js';
 import { validatePayment, applyPayment } from './payment.js';
-import { recomputePropertySets, createNewSet } from '../property.js';
+import { addPropertyCard, recomputePropertySets, createNewSet } from '../property.js';
 import { appendLogToState } from '../logger.js';
+import type { Card, PropertyColor, WildcardCard } from '../types.js';
+
+function placementColor(card: Card, fallbackFromSetColor?: PropertyColor | 'wild'): PropertyColor | 'wild' {
+  if (card.type === 'property') {
+    return card.color;
+  }
+  if (card.type === 'wildcard') {
+    const wild = card as WildcardCard;
+    return wild.assignedColor ?? fallbackFromSetColor ?? wild.colors[0] ?? 'wild';
+  }
+  return fallbackFromSetColor ?? 'wild';
+}
+
+function placeStolenCard(
+  player: ReturnType<typeof recomputePropertySets>,
+  card: Card,
+  color: PropertyColor | 'wild',
+  discardPile: Card[],
+) {
+  const result = addPropertyCard(player, card, color, discardPile);
+  if (result.ok) {
+    return result.player;
+  }
+  // Fallback for edge cases: create a set and push
+  const set = createNewSet(color);
+  set.cards.push(card);
+  return recomputePropertySets({ ...player, properties: [...player.properties, set] }, discardPile);
+}
 
 export function resolveInteraction(
   state: GameState,
@@ -267,46 +295,32 @@ export function resolveInteraction(
     const initiator = nextState.players.find(p => p.id === interaction.initiatorPlayerId);
     if (!targetPlayer || !initiator) return { ok: false, error: 'Player not found.' };
 
-    // Find and remove card from target
-    let stolenCard: any;
+    // Find and remove card from target, remembering the set color for wilds.
+    let stolenCard: Card | undefined;
+    let sourceSetColor: PropertyColor | 'wild' | undefined;
     let found = false;
     for (const set of targetPlayer.properties) {
       const idx = set.cards.findIndex(c => c.id === cardId);
       if (idx !== -1) {
         if (set.isComplete) return { ok: false, error: 'Cannot steal from a complete set.' };
+        sourceSetColor = set.color;
         [stolenCard] = set.cards.splice(idx, 1);
         found = true;
-        // Recalculate completeness
-        set.isComplete = false; // Obviously false now as it was incomplete before and we removed a card
-        // Wait, if it was complete before we wouldn't be here. 
-        // If it was incomplete, it stays incomplete.
-        // We should cleanup empty sets
+        set.isComplete = false;
         targetPlayer.properties = targetPlayer.properties.filter(s => s.cards.length > 0);
         break;
       }
     }
 
-    if (!found) return { ok: false, error: 'Target card not found in collections.' };
+    if (!found || !stolenCard) return { ok: false, error: 'Target card not found in collections.' };
 
-    // Add to initiator
-    // For simplicity, add to a new or existing set of the same color
-    const color = stolenCard.color || (stolenCard.type === 'wildcard' ? stolenCard.colors[0] : 'wild');
-    // Note: Monopoly deal cards usually stay in their assigned color group.
-    // If it's a wildcard, it keeps its current assigned color if possible.
-    
-    // Check if initiator already has a set of this color
-    let initiatorSet = initiator.properties.find(s => s.color === color && !s.isComplete);
-    if (!initiatorSet) {
-      const { setId } = createNewSet(color as any);
-      initiatorSet = { setId, color: color as any, cards: [], isComplete: false };
-      initiator.properties.push(initiatorSet);
-    }
-    initiatorSet.cards.push(stolenCard);
-    
-    // Recalculate initiator and target sets
+    const color = placementColor(stolenCard, sourceSetColor);
+    const nextInitiator = placeStolenCard(initiator, stolenCard, color, nextState.discardPile);
+    const nextTarget = recomputePropertySets(targetPlayer, nextState.discardPile);
+
     nextState.players = nextState.players.map(p => {
-      if (p.id === initiator.id) return recomputePropertySets(p, nextState.discardPile);
-      if (p.id === targetPlayer.id) return recomputePropertySets(p, nextState.discardPile);
+      if (p.id === initiator.id) return nextInitiator;
+      if (p.id === targetPlayer.id) return nextTarget;
       return p;
     });
 
@@ -339,8 +353,10 @@ export function resolveInteraction(
     const initiator = nextState.players.find(p => p.id === interaction.initiatorPlayerId);
     if (!targetPlayer || !initiator) return { ok: false, error: 'Player not found.' };
 
-    let targetCard: any;
-    let initiatorCard: any;
+    let targetCard: Card | undefined;
+    let initiatorCard: Card | undefined;
+    let targetSourceColor: PropertyColor | 'wild' | undefined;
+    let initiatorSourceColor: PropertyColor | 'wild' | undefined;
 
     // Remove from target
     let foundTarget = false;
@@ -348,6 +364,7 @@ export function resolveInteraction(
       const idx = set.cards.findIndex(c => c.id === targetCardId);
       if (idx !== -1) {
         if (set.isComplete) return { ok: false, error: 'Cannot take from a complete set.' };
+        targetSourceColor = set.color;
         [targetCard] = set.cards.splice(idx, 1);
         foundTarget = true;
         set.isComplete = false;
@@ -362,6 +379,7 @@ export function resolveInteraction(
       const idx = set.cards.findIndex(c => c.id === initiatorCardId);
       if (idx !== -1) {
         if (set.isComplete) return { ok: false, error: 'Cannot give from a complete set.' };
+        initiatorSourceColor = set.color;
         [initiatorCard] = set.cards.splice(idx, 1);
         foundInitiator = true;
         set.isComplete = false;
@@ -370,33 +388,27 @@ export function resolveInteraction(
     }
     initiator.properties = initiator.properties.filter(s => s.cards.length > 0);
 
-    if (!foundTarget || !foundInitiator) return { ok: false, error: 'Cards not found in collections.' };
-
-    // Swap ownership
-    // Add initiator's card to target
-    const targetColor = (initiatorCard as any).color || 'wild';
-    let targetSet = targetPlayer.properties.find(s => s.color === targetColor && !s.isComplete);
-    if (!targetSet) {
-      const { setId } = createNewSet(targetColor as any);
-      targetSet = { setId, color: targetColor as any, cards: [], isComplete: false };
-      targetPlayer.properties.push(targetSet);
+    if (!foundTarget || !foundInitiator || !targetCard || !initiatorCard) {
+      return { ok: false, error: 'Cards not found in collections.' };
     }
-    targetSet.cards.push(initiatorCard);
 
-    // Add target's card to initiator
-    const initiatorColor = (targetCard as any).color || 'wild';
-    let initiatorSet = initiator.properties.find(s => s.color === initiatorColor && !s.isComplete);
-    if (!initiatorSet) {
-      const { setId } = createNewSet(initiatorColor as any);
-      initiatorSet = { setId, color: initiatorColor as any, cards: [], isComplete: false };
-      initiator.properties.push(initiatorSet);
-    }
-    initiatorSet.cards.push(targetCard);
+    // Each card keeps the color it was sitting as.
+    let nextTarget = placeStolenCard(
+      targetPlayer,
+      initiatorCard,
+      placementColor(initiatorCard, initiatorSourceColor),
+      nextState.discardPile,
+    );
+    let nextInitiator = placeStolenCard(
+      initiator,
+      targetCard,
+      placementColor(targetCard, targetSourceColor),
+      nextState.discardPile,
+    );
 
-    // Recalculate initiator and target sets
     nextState.players = nextState.players.map(p => {
-      if (p.id === initiator.id) return recomputePropertySets(p);
-      if (p.id === targetPlayer.id) return recomputePropertySets(p);
+      if (p.id === initiator.id) return nextInitiator;
+      if (p.id === targetPlayer.id) return nextTarget;
       return p;
     });
 

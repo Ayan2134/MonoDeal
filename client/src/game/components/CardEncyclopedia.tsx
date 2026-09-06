@@ -31,7 +31,7 @@ const ENCYCLOPEDIA_CARDS: Partial<Card>[] = [
   { type: CardType.Action, name: 'Pass Go', value: 1, actionId: 'pass-go', actionCategory: 'utility', metadata: { description: 'Draw 2 extra cards.', rulesText: 'Draw two cards from the Draw Pile.' } },
   { type: CardType.Action, name: 'House', value: 3, actionId: 'house', actionCategory: 'building', attachable: true, metadata: { description: 'Add to any completed set to add 3M to the rent.', rulesText: 'Can only be played on a COMPLETED set.' } },
   { type: CardType.Action, name: 'Hotel', value: 4, actionId: 'hotel', actionCategory: 'building', attachable: true, metadata: { description: 'Add to any completed set with a House for +4M rent.', rulesText: 'Only one Hotel per set.' } },
-  { type: CardType.Action, name: 'Double The Rent', value: 2, actionId: 'double-the-rent', actionCategory: 'modifier', metadata: { description: 'Double the rent amount of a Rent card.', rulesText: 'Must be played with a Rent card.' } },
+  { type: CardType.Action, name: 'Double The Rent', value: 1, actionId: 'double-the-rent', actionCategory: 'modifier', metadata: { description: 'Double the rent amount of a Rent card.', rulesText: 'Must be played with a Rent card.' } },
 
   // Rents
   { type: CardType.Action, name: 'Rent (Red/Yellow)', value: 1, actionId: 'rent', actionCategory: 'payment', supportedColors: [PropertyColor.Red, PropertyColor.Yellow], affectsAllPlayers: true, metadata: { description: 'Charge all players rent for your Red or Yellow properties.' } },
