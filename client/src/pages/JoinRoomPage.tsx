@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../shared/PageHeader';
-import { getPlayerName } from '../session/playerSession';
+import { getCurrentRoom, getPlayerName } from '../session/playerSession';
 import { useLobbyStore } from '../store/lobbyStore';
 
 export function JoinRoomPage() {
@@ -9,53 +9,73 @@ export function JoinRoomPage() {
   const { roomCode: inviteRoomCode } = useParams();
   const [searchParams] = useSearchParams();
   const joinRoom = useLobbyStore((state) => state.joinRoom);
+  const recoverPlayerSession = useLobbyStore((state) => state.recoverPlayerSession);
   const isLoading = useLobbyStore((state) => state.isLoading);
   const storeError = useLobbyStore((state) => state.error);
   const initialRoomCode = searchParams.get('roomCode') ?? '';
-  const initialPlayerName = getPlayerName();
-  const [playerName, setPlayerName] = useState(initialPlayerName);
+  const [playerName, setPlayerName] = useState(getPlayerName());
   const [roomCode, setRoomCode] = useState(inviteRoomCode ?? initialRoomCode);
   const [error, setError] = useState('');
-  const hasAutoAttemptedRef = useRef(false);
+  const [isResuming, setIsResuming] = useState(false);
+  const hasTriedResumeRef = useRef(false);
 
+  // Returning players who already sat in this room can resume without retyping a name.
+  // New invite visitors always choose a name first — no silent "Player" join.
   useEffect(() => {
-    if (!inviteRoomCode || hasAutoAttemptedRef.current) {
+    if (!inviteRoomCode || hasTriedResumeRef.current) {
       return;
     }
 
-    hasAutoAttemptedRef.current = true;
-    const autoJoinName = playerName.trim() || 'Player';
+    const session = getCurrentRoom();
+    if (!session || session.roomCode.toUpperCase() !== inviteRoomCode.toUpperCase()) {
+      return;
+    }
 
-    void joinRoom({
-      // Re-using a stored name lets an invite link behave like a seamless
-      // reconnect for returning players. On the server, the same playerId will
-      // reclaim the existing seat instead of creating a duplicate player.
-      playerName: autoJoinName,
-      roomCode: inviteRoomCode,
-    }).then((result) => {
-      if (result.ok) {
+    hasTriedResumeRef.current = true;
+    setIsResuming(true);
+
+    void recoverPlayerSession().then((result) => {
+      setIsResuming(false);
+      if (result?.ok) {
         navigate(`/lobby/${result.room.roomId}`, { state: result.room });
       }
     });
-  }, [inviteRoomCode, joinRoom, navigate, playerName]);
+  }, [inviteRoomCode, navigate, recoverPlayerSession]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
 
-    if (!playerName.trim() || !roomCode.trim()) {
-      setError('Enter your name and room code.');
+    const trimmedName = playerName.trim();
+    const trimmedCode = (inviteRoomCode ?? roomCode).trim().toUpperCase();
+
+    if (!trimmedName) {
+      setError('Enter your name to join.');
+      return;
+    }
+
+    if (!trimmedCode) {
+      setError('Enter a room code.');
       return;
     }
 
     const result = await joinRoom({
-      playerName: playerName.trim(),
-      roomCode: roomCode.trim().toUpperCase(),
+      playerName: trimmedName,
+      roomCode: trimmedCode,
     });
 
     if (result.ok) {
       navigate(`/lobby/${result.room.roomId}`, { state: result.room });
     }
+  }
+
+  if (isResuming) {
+    return (
+      <section className="flex min-h-[50vh] flex-col items-center justify-center space-y-4 text-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-brass border-t-transparent" />
+        <p className="text-white/70">Resuming your seat in room {inviteRoomCode}…</p>
+      </section>
+    );
   }
 
   return (
@@ -65,8 +85,8 @@ export function JoinRoomPage() {
         title={inviteRoomCode ? `Join room ${inviteRoomCode}` : 'Join a room'}
         description={
           inviteRoomCode
-            ? 'This invite link will try to place you back into the same room session automatically.'
-            : 'Enter a room code from the host to join the waiting lobby.'
+            ? 'Choose a display name, then join the lobby.'
+            : 'Enter your name and a room code from the host.'
         }
       />
       <form onSubmit={handleSubmit} className="grid max-w-md gap-5 rounded-lg border border-white/10 bg-[#181c20] p-6 shadow-2xl shadow-black/20">
@@ -77,11 +97,14 @@ export function JoinRoomPage() {
             onChange={(event) => setPlayerName(event.target.value)}
             className="w-full rounded-md border border-white/10 bg-[#181c20] px-4 py-3 text-white outline-none ring-brass/40 transition focus:ring-4"
             placeholder="Jordan"
+            autoFocus
+            maxLength={24}
           />
         </label>
         {inviteRoomCode ? (
-          <div className="rounded-md border border-white/10 bg-[#181c20] px-4 py-3 text-sm text-white/70">
-            Invite link detected. We&apos;ll auto-join with your saved session when possible.
+          <div className="rounded-md border border-white/10 bg-white/5 px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-widest text-white/40">Room code</p>
+            <p className="mt-1 font-mono text-2xl font-bold tracking-widest text-brass">{inviteRoomCode}</p>
           </div>
         ) : (
           <label className="block">
@@ -101,7 +124,7 @@ export function JoinRoomPage() {
           type="submit"
           disabled={isLoading}
         >
-          {isLoading ? 'Joining...' : inviteRoomCode ? 'Join From Invite' : 'Join Room'}
+          {isLoading ? 'Joining...' : 'Join Room'}
         </button>
       </form>
     </section>
